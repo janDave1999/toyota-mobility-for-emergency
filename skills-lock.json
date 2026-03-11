@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "business-analyst": {
+      "source": "aj-geddes/claude-code-bmad-skills",
+      "sourceType": "github",
+      "computedHash": "c87a25083afa27b23094152c213a74fbfbc0df2089ace8010b8f30876da99f8c"
+    },
+    "pptx-presentation-builder": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "de1f82d5f9346bb1b74764664870d3da8236c54398da141b07dda4581dc3e30f"
+    },
+    "prototype-prompt-generator": {
+      "source": "cexll/myclaude",
+      "sourceType": "github",
+      "computedHash": "c97833a4243900f855eb5107e89736fa70940eed1e84ad241ae4030940679a67"
+    }
+  }
+}
