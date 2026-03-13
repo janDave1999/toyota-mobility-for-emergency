@@ -16,12 +16,17 @@
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-03-13 | Jan Dave Zamora | Initial version |
+| 1.1 | 2026-03-13 | Jan Dave Zamora | Added Supabase PostGIS, SMS/USSD, Silent SOS, Cloudflare R2 endpoints |
 
 ---
 
 ## 1. Overview
 
 This document defines the REST API specification for the Toyota Emergency Response Platform. All endpoints follow RESTful conventions and return JSON responses.
+
+### Authentication Note
+
+This API uses **custom JWT authentication** (not Supabase Auth). Tokens are issued via the Authentication API (Section 3) and must be included in the `Authorization` header for all protected endpoints.
 
 ---
 
@@ -699,7 +704,368 @@ GET /location/directions?origin_lat=14.5&origin_lng=120.9&dest_lat=14.6&dest_lng
 
 ---
 
-## 14. Report/Analytics API
+## 14. Supabase PostGIS API
+
+### 14.1 Find Nearby Incidents (PostGIS RPC)
+
+```
+POST /rpc/find_nearby_incidents
+```
+
+**Request:**
+```json
+{
+  "lat": 14.5995,
+  "lng": 120.9842,
+  "radius_km": 5,
+  "status_filter": ["RECEIVED", "DISPATCHED"]
+}
+```
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "EMG-2026-0142",
+      "type": "MEDICAL",
+      "distance_km": 0.8,
+      "status": "DISPATCHED"
+    }
+  ]
+}
+```
+
+### 14.2 Find Nearby Responders (PostGIS RPC)
+
+```
+POST /rpc/find_nearby_responders
+```
+
+**Request:**
+```json
+{
+  "lat": 14.5995,
+  "lng": 120.9842,
+  "radius_km": 10,
+  "agency_type": "AMBULANCE",
+  "status": "AVAILABLE"
+}
+```
+
+### 14.3 Find Nearby First Aiders (PostGIS RPC)
+
+```
+POST /rpc/find_nearby_first_aiders
+```
+
+**Request:**
+```json
+{
+  "lat": 14.5995,
+  "lng": 120.9842,
+  "radius_km": 5,
+  "profession": "NURSE"
+}
+```
+
+### 14.4 Get Incidents in Polygon (PostGIS)
+
+```
+POST /rpc/find_incidents_in_area
+```
+
+**Request:**
+```json
+{
+  "polygon": [[120.9, 14.5], [121.0, 14.5], [121.0, 14.6], [120.9, 14.6]],
+  "start_date": "2026-01-01",
+  "end_date": "2026-03-13"
+}
+```
+
+### 14.5 Get Heat Map Data (PostGIS)
+
+```
+POST /rpc/get_incidents_heatmap
+```
+
+**Request:**
+```json
+{
+  "incident_type": "MEDICAL",
+  "start_date": "2026-01-01",
+  "end_date": "2026-03-13",
+  "grid_size_km": 1
+}
+```
+
+---
+
+## 15. SMS/USSD API
+
+### 15.1 Receive Incoming SMS (Webhook)
+
+```
+POST /sms/webhook
+```
+
+**Request (from SMS Gateway):**
+```json
+{
+  "from": "+639123456789",
+  "to": "911TOYOTA",
+  "message": "AMBULANCE Taft Avenue Manila",
+  "timestamp": "2026-03-13T10:30:00Z"
+}
+```
+
+**Internal Processing:**
+- Parse emergency type
+- Extract location
+- Create incident
+
+**Response to Gateway:**
+```json
+{
+  "success": true,
+  "message_id": "sms-uuid"
+}
+```
+
+### 15.2 Send SMS to User
+
+```
+POST /sms/send
+```
+
+**Request:**
+```json
+{
+  "to": "+639123456789",
+  "template": "EMERGENCY_CONFIRMATION",
+  "data": {
+    "incident_id": "EMG-2026-0142",
+    "type": "Medical Emergency",
+    "eta": "8 minutes"
+  }
+}
+```
+
+### 15.3 Get SMS Delivery Status
+
+```
+GET /sms/{message_id}/status
+```
+
+### 15.4 USSD Session Start (Webhook)
+
+```
+POST /ussd/session
+```
+
+**Request:**
+```json
+{
+  "session_id": "ussd-session-uuid",
+  "phone_number": "+639123456789",
+  "ussd_code": "*123#"
+}
+```
+
+### 15.5 USSD Input (Webhook)
+
+```
+POST /ussd/input
+```
+
+**Request:**
+```json
+{
+  "session_id": "ussd-session-uuid",
+  "input": "1",
+  "step": "MENU_MAIN"
+}
+```
+
+### 15.6 SMS Command Parser
+
+```
+POST /sms/parse
+```
+
+**Request:**
+```json
+{
+  "message": "AMBULANCE Taft Ave Manila man having chest pain"
+}
+```
+
+**Response:**
+```json
+{
+  "type": "MEDICAL",
+  "location": "Taft Avenue, Manila",
+  "description": "man having chest pain",
+  "confidence": 0.95
+}
+```
+
+---
+
+## 16. Silent SOS API
+
+### 16.1 Activate Silent SOS
+
+```
+POST /silent-sos/activate
+```
+
+**Request:**
+```json
+{
+  "user_id": "user-uuid",
+  "latitude": 14.5995,
+  "longitude": 120.9842,
+  "accuracy": 5,
+  "battery_level": 34,
+  "network_type": "4G",
+  "trigger_method": "LONG_PRESS_POWER",
+  "include_location_updates": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "incident_id": "SILENT-2026-0142",
+  "message": "Emergency services dispatched silently"
+}
+```
+
+### 16.2 Update Silent SOS Location
+
+```
+PUT /silent-sos/{incident_id}/location
+```
+
+**Request:**
+```json
+{
+  "latitude": 14.6000,
+  "longitude": 120.9850,
+  "accuracy": 5,
+  "movement_status": "MOVING",
+  "direction": "NORTHBOUND"
+}
+```
+
+### 16.3 Confirm Safety (Post-Incident)
+
+```
+POST /silent-sos/{incident_id}/confirm
+```
+
+**Request:**
+```json
+{
+  "status": "SAFE",
+  "method": "APP"
+}
+```
+
+### 16.4 Cancel Silent SOS (False Alarm)
+
+```
+POST /silent-sos/{incident_id}/cancel
+```
+
+**Request:**
+```json
+{
+  "reason": "Accidental activation"
+}
+```
+
+### 16.5 Get Silent SOS Status
+
+```
+GET /silent-sos/{incident_id}/status
+```
+
+**Response:**
+```json
+{
+  "incident_id": "SILENT-2026-0142",
+  "status": "ACTIVE",
+  "location": {
+    "latitude": 14.6000,
+    "longitude": 120.9850,
+    "last_update": "2026-03-13T10:35:00Z",
+    "movement_status": "MOVING"
+  },
+  "responders_notified": ["responder-1", "responder-2"]
+}
+```
+
+---
+
+## 17. Storage API (Cloudflare R2)
+
+### 17.1 Get Upload URL
+
+```
+POST /storage/upload-url
+```
+
+**Request:**
+```json
+{
+  "file_name": "photo.jpg",
+  "content_type": "image/jpeg",
+  "folder": "incidents/2026-03"
+}
+```
+
+**Response:**
+```json
+{
+  "upload_url": "https://storage.emergency.ph/upload/xxx",
+  "file_url": "https://storage.emergency.ph/files/photo.jpg",
+  "expires_at": "2026-03-13T10:35:00Z"
+}
+```
+
+### 17.2 Confirm Upload
+
+```
+POST /storage/{file_id}/confirm
+```
+
+**Request:**
+```json
+{
+  "incident_id": "EMG-2026-0142",
+  "upload_type": "EVIDENCE"
+}
+```
+
+### 17.3 Get File
+
+```
+GET /storage/{file_id}
+```
+
+### 17.4 Delete File
+
+```
+DELETE /storage/{file_id}
+```
+
+---
+
+## 18. Report/Analytics API
 
 ### 14.1 Get Dashboard Stats
 
@@ -737,54 +1103,105 @@ GET /reports/heatmap?date_from=2026-01-01&date_to=2026-03-13&type=MEDICAL
 
 ---
 
-## 15. WebSocket Events
+## 19. WebSocket Events (Socket.io)
 
-### 15.1 Connect
+### 19.1 Connect
 
 ```
-WS /ws?token=<access_token>
+Socket.io Client: io('https://api.emergency.ph')
 ```
 
-### 15.2 Subscribe to Incident
-
-```json
-{
-  "action": "subscribe",
-  "incident_id": "EMG-2026-0142"
-}
-```
-
-### 15.3 Location Update (Client → Server)
-
-```json
-{
-  "action": "location_update",
-  "latitude": 14.5995,
-  "longitude": 120.9842,
-  "accuracy": 5
-}
-```
-
-### 15.4 Incident Update (Server → Client)
-
-```json
-{
-  "event": "incident:update",
-  "data": {
-    "id": "EMG-2026-0142",
-    "status": "EN_ROUTE",
-    "responder": {
-      "id": "responder-uuid",
-      "name": "Sgt. Juan",
-      "eta_minutes": 5
-    }
+**Authentication:**
+```javascript
+io.connect('https://api.emergency.ph', {
+  auth: {
+    token: '<access_token>'
   }
-}
+})
 ```
+
+### 19.2 Connection Events
+
+| Event | Direction | Description |
+|-------|-----------|-------------|
+| `connect` | Server→Client | Successful connection |
+| `disconnect` | Server→Client | Disconnected from server |
+| `connect_error` | Server→Client | Connection error |
+
+### 19.3 Client Events (Send to Server)
+
+```javascript
+// Subscribe to incident
+socket.emit('incident:subscribe', { incident_id: 'EMG-2026-0142' });
+
+// Unsubscribe from incident
+socket.emit('incident:unsubscribe', { incident_id: 'EMG-2026-0142' });
+
+// Update location
+socket.emit('location:update', {
+  latitude: 14.5995,
+  longitude: 120.9842,
+  accuracy: 5,
+  incident_id: 'EMG-2026-0142'
+});
+
+// Join room (agency-specific)
+socket.emit('room:join', { room: 'agency:POLICE' });
+
+// Send chat message
+socket.emit('chat:message', {
+  incident_id: 'EMG-2026-0142',
+  content: 'On my way, ETA 5 minutes'
+});
+```
+
+### 19.4 Server Events (Receive from Server)
+
+```javascript
+// New incident alert
+socket.on('incident:new', (data) => {
+  // New emergency in area
+});
+
+// Incident update
+socket.on('incident:update', (data) => {
+  // Status changed, responder added, etc.
+});
+
+// Location update (responder)
+socket.on('location:update', (data) => {
+  // Responder or reporter location changed
+});
+
+// Chat message
+socket.on('chat:message', (data) => {
+  // New message in incident
+});
+
+// Silent SOS alert (responders only)
+socket.on('sos:alert', (data) => {
+  // Silent emergency nearby
+});
+
+// Broadcast alert (dispatchers)
+socket.on('broadcast:alert', (data) => {
+  // Mass notification received
+});
+```
+
+### 19.5 Rooms & Channels
+
+| Room | Description | Access |
+|------|-------------|--------|
+| `user:{user_id}` | Personal notifications | All authenticated |
+| `incident:{incident_id}` | Incident-specific | Involved users |
+| `agency:{agency_type}` | Agency-wide | Responders |
+| `dispatcher` | Dispatchers only | Dispatchers |
+| `location:{lat},{lng}` | Geographic (future) | All |
 
 ---
 
-## 16. Error Responses
+## 20. Error Responses
 
 ### 16.1 Standard Error Format
 
@@ -814,7 +1231,7 @@ WS /ws?token=<access_token>
 
 ---
 
-## 17. Rate Limits
+## 21. Rate Limits
 
 | Endpoint | Limit |
 |----------|-------|
@@ -825,7 +1242,7 @@ WS /ws?token=<access_token>
 
 ---
 
-## 18. Related Documents
+## 22. Related Documents
 
 - [technical-architecture.md](technical-architecture.md)
 - [unified-data-dictionary.md](unified-data-dictionary.md)
