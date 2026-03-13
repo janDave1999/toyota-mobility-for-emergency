@@ -431,20 +431,6 @@ PHASE 2: ANONYMOUS REPORT
    ─────────         ─────────        ─────────
    Opens app,       Selects          Selects
    taps "Report     "Domestic       "Witness"
-   Emergency"       Violence"        (not victim)
-
-
-   ✓ Option to report as witness
-   ✓ Different from victim report
-
-
-PHASE 3: SAFE DETAILS
-━━━━━━━━━━━━━━━━━━━━━━
-
-   11:19 PM         11:20 PM         11:21 PM
-   ─────────         ─────────        ─────────
-   Enters:          Optional:        Taps "Send
-   - Address        Record          Anonymously"
    - What she       audio (if
     hears           safely)
    - "Woman and    recorded)
