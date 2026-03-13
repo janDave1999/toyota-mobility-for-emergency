@@ -18,6 +18,8 @@
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-03-13 | Jan Dave Zamora | Initial consolidated version |
+| 1.1 | 2026-03-13 | Jan Dave Zamora | Added Organization hierarchy (national→regional→provincial→city), deprecated Agency in favor of Organization |
+| 1.2 | 2026-03-13 | Jan Dave Zamora | Updated registration flow: Citizens self-register, First Aiders/Responders registered by Organizations |
 
 ---
 
@@ -51,12 +53,21 @@ interface User {
   // Citizen-specific
   emergency_contacts: EmergencyContact[];
   
-  // First Aider-specific (embedded)
+  // First Aider (assigned by Organization)
   is_first_aider: boolean;
   first_aider_profession: FirstAiderProfession;
   first_aider_license: string;
   first_aider_license_verified: boolean;
+  first_aider_organization_id: string;      // FK to Organization
   first_aider_max_distance_km: number;
+  
+  // Responder (assigned by Organization)
+  is_responder: boolean;
+  responder_organization_id: string;         // FK to Organization
+  responder_badge_number: string;
+  responder_rank: string;
+  responder_unit: string;
+  responder_verified: boolean;
   
   // Settings
   notification_preferences: NotificationPreferences;
@@ -69,34 +80,90 @@ enum UserRole {
   DISPATCHER = "DISPATCHER",
   ADMIN = "ADMIN"
 }
+```
 
-interface EmergencyContact {
+---
+
+### 2.2 Organization Entity (Hierarchical)
+
+```typescript
+interface Organization {
   id: string;
-  name: string;
+  name: string;                   // Philippine National Police
+  short_name: string;             // PNP
+  code: string;                   // Unique code (PNP, BFP, LGU-NCR, etc.)
+  type: OrganizationType;         // POLICE, FIRE, AMBULANCE, LGU, OCD
+  
+  // Hierarchy
+  parent_id: string | null;        // Parent organization (null for national HQ)
+  level: number;                   // 0=National, 1=Regional, 2=Provincial, 3=City/Municipal
+  
+  // Location
+  region: string | null;
+  province: string | null;
+  city: string | null;
+  barangay: string | null;
+  address: string;
   phone: string;
-  relationship: string;
-  is_primary: boolean;
+  email: string;
+  website: string;
+  latitude: number;
+  longitude: number;
+  
+  // Status
+  is_active: boolean;
+  created_at: timestamp;
+  updated_at: timestamp;
 }
 
-interface NotificationPreferences {
-  push_enabled: boolean;
-  sms_enabled: boolean;
-  email_enabled: boolean;
-  silent_sos_enabled: boolean;
-  first_aider_alerts: boolean;
+enum OrganizationType {
+  POLICE = "POLICE",
+  AMBULANCE = "AMBULANCE",
+  FIRE = "FIRE",
+  LGU = "LGU",
+  OCD = "OCD",
+  COAST_GUARD = "COAST_GUARD",
+  BARANGAY = "BARANGAY",
+  PRIVATE = "PRIVATE"
 }
 
-interface AccessibilitySettings {
-  large_text: boolean;
-  high_contrast: boolean;
-  voice_commands: boolean;
-  gesture_free: boolean;
+enum OrganizationLevel {
+  NATIONAL = 0,       // e.g., PNP Headquarters
+  REGIONAL = 1,      // e.g., NCR Police Office
+  PROVINCIAL = 2,     // e.g., Rizal Provincial Police
+  CITY = 3,          // e.g., Quezon City Police District
+  MUNICIPAL = 4,     // e.g., Municipality of Rodriguez
+  BARANGAY = 5       // e.g., Barangay Defense System
 }
 ```
 
 ---
 
-### 2.2 Agency Entity
+### 2.3 Organization Admin Entity
+
+```typescript
+interface OrganizationAdmin {
+  id: string;
+  user_id: string;              // FK to User
+  organization_id: string;       // FK to Organization
+  role: OrganizationAdminRole;   // ADMIN, SUPER_ADMIN
+  permissions: string[];         // ['manage_responders', 'view_stats', 'dispatch', 'manage_branches']
+  is_active: boolean;
+  approved_by: string;          // FK to User (supervisor)
+  approved_at: timestamp;
+  created_at: timestamp;
+  updated_at: timestamp;
+}
+
+enum OrganizationAdminRole {
+  ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN"
+}
+```
+
+---
+
+### 2.4 Agency Entity (Legacy - Use Organization Instead)
 
 ```typescript
 interface Agency {

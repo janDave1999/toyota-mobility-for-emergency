@@ -18,6 +18,8 @@
 | 1.0 | 2026-03-13 | Jan Dave Zamora | Initial version |
 | 1.1 | 2026-03-13 | Jan Dave Zamora | Added Supabase PostGIS, SMS/USSD, Silent SOS, Cloudflare R2 endpoints |
 | 1.2 | 2026-03-13 | Jan Dave Zamora | Added Agency API section, updated User role to object, fixed section numbering |
+| 1.3 | 2026-03-13 | Jan Dave Zamora | Added Organization API (hierarchical structure), updated section numbering |
+| 1.4 | 2026-03-13 | Jan Dave Zamora | Updated registration flow: Citizens self-register, First Aiders/Responders registered by Organizations |
 
 ---
 
@@ -138,11 +140,13 @@ POST /auth/refresh
 }
 ```
 
-### 3.4 Register
+### 3.4 Register (Citizen)
 
 ```
 POST /auth/register
 ```
+
+> **Note:** This endpoint creates a **CITIZEN** account only. To become a First Aider or Responder, the user must be registered by an authorized Organization.
 
 **Request:**
 ```json
@@ -159,13 +163,18 @@ POST /auth/register
 ```json
 {
   "success": true,
+  "access_token": "eyJhbGciOiJIUzI1...",
   "user": {
     "id": "user-uuid",
     "phone": "+639123456789",
     "email": "user@example.com",
     "first_name": "Juan",
     "last_name": "Dela Cruz",
-    "role": "CITIZEN"
+    "role": {
+      "primary": "CITIZEN",
+      "is_first_aider": false,
+      "is_responder": false
+    }
   }
 }
 ```
@@ -193,7 +202,14 @@ GET /users/me
     "is_first_aider": true,
     "first_aider_profession": "NURSE",
     "first_aider_license": "PRC-123456",
-    "is_verified_first_aider": true
+    "is_verified_first_aider": true,
+    "first_aider_organization_id": "hospital-org-uuid",
+    "first_aider_organization_name": "Philippine General Hospital",
+    "is_responder": true,
+    "responder_organization_id": "pnp-org-uuid",
+    "responder_organization_name": "PNP NCR",
+    "responder_badge": "PNP-12345",
+    "responder_rank": "Sergeant"
   },
   "emergency_contacts": [
     {
@@ -594,9 +610,365 @@ POST /incidents/{id}/cancel
 
 ---
 
-## 7. Agency API
+## 7. Organization API
 
-### 7.1 List Agencies
+### 7.1 Create Organization (Super Admin)
+
+```
+POST /organizations
+```
+
+**Request:**
+```json
+{
+  "name": "Philippine National Police",
+  "short_name": "PNP",
+  "code": "PNP",
+  "type": "POLICE",
+  "region": null,
+  "province": null,
+  "city": null,
+  "address": "Camp Crame, Quezon City",
+  "phone": "+63287211111",
+  "email": "info@pnp.gov.ph",
+  "website": "https://pnp.gov.ph"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "org-uuid",
+  "name": "Philippine National Police",
+  "short_name": "PNP",
+  "code": "PNP",
+  "type": "POLICE",
+  "parent_id": null,
+  "level": 0,
+  "region": null,
+  "province": null,
+  "city": null,
+  "address": "Camp Crame, Quezon City",
+  "phone": "+63287211111",
+  "email": "info@pnp.gov.ph",
+  "website": "https://pnp.gov.ph",
+  "is_active": true,
+  "created_at": "2026-03-13T10:30:00Z"
+}
+```
+
+### 7.2 Create Branch/Unit (Organization Admin)
+
+```
+POST /organizations
+```
+
+**Request (creating regional office):**
+```json
+{
+  "name": "PNP NCR",
+  "short_name": "NCR",
+  "code": "PNP-NCR",
+  "type": "POLICE",
+  "parent_id": "org-uuid",
+  "level": 1,
+  "region": "NCR",
+  "address": "Camp Bagong Diwa, Taguig",
+  "phone": "+63288811211"
+}
+```
+
+**Request (creating district):**
+```json
+{
+  "name": "Manila Police District",
+  "short_name": "MPD",
+  "code": "PNP-NCR-MPD",
+  "type": "POLICE",
+  "parent_id": "ncr-org-uuid",
+  "level": 2,
+  "region": "NCR",
+  "city": "Manila",
+  "address": "Murall-Bretones St., Manila"
+}
+```
+
+### 7.3 List Organizations
+
+```
+GET /organizations
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| parent_id | uuid | Filter by parent organization |
+| level | number | Filter by level (0=national, 1=regional, 2=provincial, 3=city) |
+| type | string | Filter by type |
+| region | string | Filter by region |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "org-uuid",
+      "name": "Philippine National Police",
+      "short_name": "PNP",
+      "code": "PNP",
+      "type": "POLICE",
+      "parent_id": null,
+      "level": 0,
+      "children_count": 18,
+      "is_active": true
+    },
+    {
+      "id": "ncr-org-uuid",
+      "name": "PNP NCR",
+      "short_name": "NCR",
+      "code": "PNP-NCR",
+      "type": "POLICE",
+      "parent_id": "org-uuid",
+      "level": 1,
+      "children_count": 5,
+      "is_active": true
+    }
+  ]
+}
+```
+
+### 7.4 Get Organization Details
+
+```
+GET /organizations/{id}
+```
+
+**Response:**
+```json
+{
+  "id": "ncr-org-uuid",
+  "name": "PNP NCR",
+  "short_name": "NCR",
+  "code": "PNP-NCR",
+  "type": "POLICE",
+  "parent_id": "org-uuid",
+  "parent_name": "Philippine National Police",
+  "level": 1,
+  "region": "NCR",
+  "province": null,
+  "city": null,
+  "address": "Camp Bagong Diwa, Taguig",
+  "phone": "+63288811211",
+  "email": "ncr@pnp.gov.ph",
+  "is_active": true,
+  "statistics": {
+    "total_responders": 450,
+    "available_responders": 120,
+    "total_incidents": 1250,
+    "resolved_incidents": 1200
+  },
+  "created_at": "2026-01-01T00:00:00Z"
+}
+```
+
+### 7.5 Get Organization Hierarchy
+
+```
+GET /organizations/{id}/hierarchy
+```
+
+**Response:**
+```json
+{
+  "id": "org-uuid",
+  "name": "Philippine National Police",
+  "level": 0,
+  "children": [
+    {
+      "id": "ncr-org-uuid",
+      "name": "PNP NCR",
+      "level": 1,
+      "children": [
+        {
+          "id": "mpd-org-uuid",
+          "name": "Manila Police District",
+          "level": 2,
+          "children": [
+            {
+              "id": "station-org-uuid",
+              "name": "Station 1 - Manila",
+              "level": 3,
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 7.6 Update Organization
+
+```
+PUT /organizations/{id}
+```
+
+**Request:**
+```json
+{
+  "name": "PNP NCR Updated",
+  "phone": "+63288819999",
+  "is_active": true
+}
+```
+
+### 7.7 Delete Organization
+
+```
+DELETE /organizations/{id}
+```
+
+### 7.8 Get Responders by Organization
+
+```
+GET /organizations/{id}/responders
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| include_children | boolean | Include responders from child organizations |
+| status | string | Filter by status |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "responder-uuid",
+      "user_id": "user-uuid",
+      "name": "Sgt. Juan Dela Cruz",
+      "badge_number": "PNP-12345",
+      "rank": "Sergeant",
+      "unit": "Mobile Force Company",
+      "organization_id": "station-org-uuid",
+      "organization_name": "Station 1 - Manila",
+      "status": "AVAILABLE"
+    }
+  ],
+  "total": 25
+}
+```
+
+### 7.9 Register First Aider (Organization Admin)
+
+```
+POST /organizations/{id}/first-aiders
+```
+
+> **Note:** Organizations (hospitals, Red Cross, etc.) register their staff as First Aiders. The user must already exist as a CITIZEN.
+
+**Request:**
+```json
+{
+  "user_id": "user-uuid",
+  "profession": "NURSE",
+  "license_number": "PRC-123456",
+  "license_expiry": "2027-12-31",
+  "max_distance_km": 5,
+  "specializations": ["ICU", "ER"],
+  "is_verified": true
+}
+```
+
+**Response:**
+```json
+{
+  "id": "first-aider-uuid",
+  "user_id": "user-uuid",
+  "organization_id": "org-uuid",
+  "profession": "NURSE",
+  "license_number": "PRC-123456",
+  "license_expiry": "2027-12-31",
+  "license_verified": true,
+  "verification_status": "VERIFIED",
+  "max_distance_km": 5,
+  "specializations": ["ICU", "ER"],
+  "is_available": true,
+  "created_at": "2026-03-13T10:30:00Z"
+}
+```
+
+### 7.10 Remove First Aider (Organization Admin)
+
+```
+DELETE /organizations/{id}/first-aiders/{first_aider_id}
+```
+
+### 7.11 Register Responder (Organization Admin)
+
+```
+POST /organizations/{id}/responders
+```
+
+> **Note:** Organizations (PNP, BFP, etc.) register their staff as Responders. The user must already exist as a CITIZEN.
+
+**Request:**
+```json
+{
+  "user_id": "user-uuid",
+  "badge_number": "PNP-12345",
+  "rank": "Sergeant",
+  "unit": "Mobile Force Company",
+  "status": "AVAILABLE"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "responder-uuid",
+  "user_id": "user-uuid",
+  "organization_id": "org-uuid",
+  "name": "Sgt. Juan Dela Cruz",
+  "badge_number": "PNP-12345",
+  "rank": "Sergeant",
+  "unit": "Mobile Force Company",
+  "status": "AVAILABLE",
+  "is_verified": true,
+  "created_at": "2026-03-13T10:30:00Z"
+}
+```
+
+### 7.12 Update Responder (Organization Admin)
+
+```
+PUT /organizations/{id}/responders/{responder_id}
+```
+
+**Request:**
+```json
+{
+  "rank": "Staff Sergeant",
+  "unit": "Special Action Force",
+  "status": "OFF_DUTY"
+}
+```
+
+### 7.13 Remove Responder (Organization Admin)
+
+```
+DELETE /organizations/{id}/responders/{responder_id}
+```
+
+---
+
+## 9. Agency API
+
+> **Note:** For new implementations, use the **Organization API (Section 7)** which provides hierarchical organization management. The Agency API is maintained for backward compatibility and represents organizations at the local level.
+
+### 9.1 List Agencies
 
 ```
 GET /agencies
@@ -646,7 +1018,7 @@ GET /agencies
 }
 ```
 
-### 7.2 Get Agency Details
+### 9.2 Get Agency Details
 
 ```
 GET /agencies/{id}
@@ -677,7 +1049,7 @@ GET /agencies/{id}
 }
 ```
 
-### 7.3 Get Agency Responders
+### 9.3 Get Agency Responders
 
 ```
 GET /agencies/{id}/responders
@@ -711,7 +1083,7 @@ GET /agencies/{id}/responders
 }
 ```
 
-### 7.4 Add Responder (Agency Admin)
+### 9.4 Add Responder (Agency Admin)
 
 ```
 POST /agencies/{id}/responders
@@ -743,7 +1115,7 @@ POST /agencies/{id}/responders
 }
 ```
 
-### 7.5 Update Responder (Agency Admin)
+### 9.5 Update Responder (Agency Admin)
 
 ```
 PUT /agencies/{id}/responders/{responder_id}
@@ -758,13 +1130,13 @@ PUT /agencies/{id}/responders/{responder_id}
 }
 ```
 
-### 7.6 Remove Responder (Agency Admin)
+### 9.6 Remove Responder (Agency Admin)
 
 ```
 DELETE /agencies/{id}/responders/{responder_id}
 ```
 
-### 7.7 Get Agency Incidents
+### 9.7 Get Agency Incidents
 
 ```
 GET /agencies/{id}/incidents
@@ -777,7 +1149,7 @@ GET /agencies/{id}/incidents
 | date_from | date | Filter from date |
 | date_to | date | Filter to date |
 
-### 7.8 Get Agency Statistics
+### 9.8 Get Agency Statistics
 
 ```
 GET /agencies/{id}/statistics
@@ -804,7 +1176,7 @@ GET /agencies/{id}/statistics
 }
 ```
 
-### 7.9 Agency Admin Management
+### 9.9 Agency Admin Management
 
 ```
 POST /agencies/{id}/admins
@@ -820,7 +1192,7 @@ POST /agencies/{id}/admins
 
 ---
 
-## 8. Responder API
+## 10. Responder API
 
 ### 8.1 Get Available Incidents
 
@@ -896,38 +1268,23 @@ POST /incidents/{id}/backup
 
 ---
 
-## 9. First Aider API
+## 11. First Aider API
 
-### 7.1 Register as First Aider
+> **Note:** First Aider registration is handled by **Organizations** (hospitals, Red Cross, etc.) via `POST /organizations/{id}/first-aiders`. See Section 7.9 for registration endpoints.
 
-```
-POST /first-aiders/register
-```
-
-**Request:**
-```json
-{
-  "profession": "NURSE",
-  "license_number": "PRC-123456",
-  "license_expiry": "2027-12-31",
-  "max_distance_km": 5,
-  "specializations": ["ICU", "ER"]
-}
-```
-
-### 7.2 Get First Aider Incidents
+### 11.1 Get First Aider Incidents
 
 ```
 GET /first-aiders/incidents?latitude=14.5995&longitude=120.9842
 ```
 
-### 7.3 Respond to Incident
+### 11.3 Respond to Incident
 
 ```
 POST /first-aiders/incidents/{id}/respond
 ```
 
-### 7.4 Decline to Respond
+### 11.3 Decline to Respond
 
 ```
 POST /first-aiders/incidents/{id}/decline
@@ -935,21 +1292,21 @@ POST /first-aiders/incidents/{id}/decline
 
 ---
 
-## 10. Dispatcher API
+## 12. Dispatcher API
 
-### 10.1 Get All Active Incidents
+### 12.1 Get All Active Incidents
 
 ```
 GET /dispatcher/incidents?status=ACTIVE
 ```
 
-### 10.2 Get All Responders
+### 12.2 Get All Responders
 
 ```
-GET /dispatcher/responders?agency=PNP&status=AVAILABLE
+GET /dispatcher/responders?organization=PNP&status=AVAILABLE
 ```
 
-### 10.3 Manual Dispatch
+### 12.3 Manual Dispatch
 
 ```
 POST /dispatcher/incidents/{id}/dispatch
@@ -963,7 +1320,7 @@ POST /dispatcher/incidents/{id}/dispatch
 }
 ```
 
-### 10.4 Escalate Incident
+### 12.4 Escalate Incident
 
 ```
 POST /dispatcher/incidents/{id}/escalate
@@ -976,7 +1333,7 @@ POST /dispatcher/incidents/{id}/escalate
 }
 ```
 
-### 10.5 Transfer Command
+### 12.5 Transfer Command
 
 ```
 POST /dispatcher/incidents/{id}/transfer-command
@@ -992,7 +1349,7 @@ POST /dispatcher/incidents/{id}/transfer-command
 
 ---
 
-## 11. Notification API
+## 13. Notification API
 
 ### 11.1 Get Notifications
 
@@ -1024,7 +1381,7 @@ PUT /users/me/notification-preferences
 
 ---
 
-## 12. Message/Chat API
+## 14. Message/Chat API
 
 ### 12.1 Get Messages
 
@@ -1048,7 +1405,7 @@ POST /incidents/{id}/messages
 
 ---
 
-## 13. Media API
+## 15. Media API
 
 ### 13.1 Upload Media
 
@@ -1075,7 +1432,7 @@ GET /media/{id}
 
 ---
 
-## 14. Broadcast API
+## 16. Broadcast API
 
 ### 14.1 Create Broadcast
 
@@ -1104,7 +1461,7 @@ GET /broadcasts/{id}
 
 ---
 
-## 15. Location API
+## 17. Location API
 
 ### 15.1 Reverse Geocode
 
@@ -1126,7 +1483,7 @@ GET /location/directions?origin_lat=14.5&origin_lng=120.9&dest_lat=14.6&dest_lng
 
 ---
 
-## 16. Supabase PostGIS API
+## 18. Supabase PostGIS API
 
 ### 16.1 Find Nearby Incidents (PostGIS RPC)
 
@@ -1224,7 +1581,7 @@ POST /rpc/get_incidents_heatmap
 
 ---
 
-## 17. SMS/USSD API
+## 19. SMS/USSD API
 
 ### 17.1 Receive Incoming SMS (Webhook)
 
@@ -1335,7 +1692,7 @@ POST /sms/parse
 
 ---
 
-## 18. Silent SOS API
+## 20. Silent SOS API
 
 ### 18.1 Activate Silent SOS
 
@@ -1433,7 +1790,7 @@ GET /silent-sos/{incident_id}/status
 
 ---
 
-## 19. Storage API (Cloudflare R2)
+## 21. Storage API (Cloudflare R2)
 
 ### 19.1 Get Upload URL
 
@@ -1487,7 +1844,7 @@ DELETE /storage/{file_id}
 
 ---
 
-## 20. Report/Analytics API
+## 22. Report/Analytics API
 
 ### 20.1 Get Dashboard Stats
 
@@ -1525,7 +1882,7 @@ GET /reports/heatmap?date_from=2026-01-01&date_to=2026-03-13&type=MEDICAL
 
 ---
 
-## 21. WebSocket Events (Socket.io)
+## 23. WebSocket Events (Socket.io)
 
 ### 21.1 Connect
 
@@ -1623,7 +1980,7 @@ socket.on('broadcast:alert', (data) => {
 
 ---
 
-## 22. Error Responses
+## 24. Error Responses
 
 ### 22.1 Standard Error Format
 
@@ -1653,7 +2010,7 @@ socket.on('broadcast:alert', (data) => {
 
 ---
 
-## 23. Rate Limits
+## 25. Rate Limits
 
 | Endpoint | Limit |
 |----------|-------|
@@ -1664,7 +2021,7 @@ socket.on('broadcast:alert', (data) => {
 
 ---
 
-## 24. Related Documents
+## 26. Related Documents
 
 - [technical-architecture.md](technical-architecture.md)
 - [unified-data-dictionary.md](unified-data-dictionary.md)

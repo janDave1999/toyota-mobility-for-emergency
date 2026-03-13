@@ -146,9 +146,9 @@ This document defines the technical architecture for the Toyota Emergency Respon
                             │  (Supabase PostGIS)   │
                             │                       │
                             │  • Users              │
+                            │  • Organizations     │
                             │  • Incidents          │
                             │  • Responders         │
-                            │  • Agencies           │
                             │  • Locations (GIS)   │
                             │  • Notifications      │
                             │  • Messages          │
@@ -216,22 +216,23 @@ This document defines the technical architecture for the Toyota Emergency Respon
 └────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────────────────────────────────┐
-│           AGENCY ADMIN DASHBOARD (AstroJS)                    │
-│           (For PNP, BFP, MMDA Agency Admins)                  │
+│           ORGANIZATION ADMIN DASHBOARD (AstroJS)                │
+│           (For PNP, BFP, LGU Organization Admins)              │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                │
 │  /src                                                         │
 │  ├── /pages                                                   │
-│  │   ├── dashboard.astro         (Agency stats & overview)   │
-│  │   ├── responders.astro        (Manage agency responders)  │
-│  │   ├── incidents.astro         (Agency incident history)    │
-│  │   ├── responders/[id].astro   (Responder details)         │
-│  │   └── settings.astro          (Agency profile)             │
+│  │   ├── dashboard.astro         (Organization stats & overview)│
+│  │   ├── branches.astro         (Manage branches/units)       │
+│  │   ├── responders.astro       (Manage organization responders)│
+│  │   ├── incidents.astro        (Organization incident history)│
+│  │   ├── responders/[id].astro  (Responder details)            │
+│  │   └── settings.astro         (Organization profile)        │
 │  ├── /components (Astro)                                      │
 │  │   ├── /common (Button, Card, Input, Modal)               │
 │  │   ├── /layout (Header, Sidebar)                          │
 │  │   ├── /responders (ResponderList, AddResponder)          │
-│  │   └── /stats (AgencyStats, ResponseTimeChart)            │
+│  │   └── /stats (OrgStats, ResponseTimeChart)               │
 │  └── /stores (Zustand/Redux)                                 │
 └────────────────────────────────────────────────────────────────┘
 ```

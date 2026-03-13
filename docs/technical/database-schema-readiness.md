@@ -47,9 +47,9 @@ This document identifies what documentation is needed before creating a comprehe
 
 **Contents:**
 - User entity (citizen, responder, dispatcher, admin)
+- Organization entity (hierarchical: national→regional→provincial→city)
 - Incident entity
 - Location entity
-- Agency entity
 - Responder entity
 - First Aider entity
 - Notification entity
@@ -187,9 +187,9 @@ Create a high-level architecture showing:
 ### Step 2: Unified Data Dictionary
 Consolidate all entities from feature specs into one document:
 - User
+- Organization (hierarchical)
 - Incident
 - Location
-- Agency
 - Responder
 - FirstAider
 - Notification
@@ -226,7 +226,7 @@ Define security requirements
 
 ### From Multi-Agency Spec
 - MultiAgencyIncident
-- Agency
+- Organization (for multi-org coordination)
 - SceneCommander
 - Handoff
 - UnifiedTimeline
