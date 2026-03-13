@@ -1,9 +1,24 @@
 # Product Brief: Unified Emergency Response Platform (Philippines)
 
-**Date:** 2026-03-05
+**Date:** 2026-03-13
 **Author:** Jan Dave Zamora
 **Status:** Draft
-**Version:** 1.1
+**Version:** 1.2
+
+---
+
+## Document Hierarchy
+
+| Document | Description |
+|----------|-------------|
+| [product-brief-emergency-response-platform.md](product-brief-emergency-response-platform.md) | This document - Main product brief |
+| [feature-specs/silent-sos-spec.md](feature-specs/silent-sos-spec.md) | Silent SOS Feature Specification |
+| [feature-specs/sms-ussd-fallback-spec.md](feature-specs/sms-ussd-fallback-spec.md) | SMS/USSD Fallback Specification |
+| [feature-specs/multi-agency-escalation.md](feature-specs/multi-agency-escalation-spec.md) | Multi-Agency Escalation Specification |
+| [personas-detailed.md](personas-detailed.md) | Detailed User Personas |
+| [user-journey-maps.md](user-journey-maps.md) | User Journey Maps |
+| [prototype-prompts/responder-mobile-app-prompt.md](prototype-prompts/responder-mobile-app-prompt.md) | Responder App Prototype Spec |
+| [prototype-prompts/dispatcher-dashboard-prompt.md](prototype-prompts/dispatcher-dashboard-prompt.md) | Dispatcher Dashboard Prototype Spec |
 
 ---
 
@@ -90,11 +105,18 @@ For detailed personas with full scenarios, see: **[personas-detailed.md](persona
 | Sgt. Juan Dela Cruz | Police Responder | Direct dispatch, exact location |
 | Elena Rivera | Station Monitor | Support when no responders respond |
 | Dr. Sarah Binay | First Aider / Nurse | Automatic alerts for nearby medical emergencies |
-| Mang Jose Reyes | Tricycle Driver | Simple reporting, offline support |
-| Marites Bulalakaw | Witness | Anonymous domestic violence reporting |
+| Mang Jose Reyes | Tricycle Driver | Simple reporting, SMS/USSD fallback |
+| Marites Bulalakaw | Witness | Anonymous domestic violence reporting, Silent SOS |
 | Junjun Mañalac | Barangay Tanod | Communication & backup coordination |
 | Mary Anderson | Tourist | Multi-language, knows local system |
 | Arlene Martinez | Fire Witness | Fast fire reporting with location |
+| **Lolo Juan** | Elderly Citizen | Silent SOS, large text, voice command |
+| **Ana** | Hearing Impaired | Text-only, visual alerts |
+| **Paolo** | Student | Silent SOS in school, panic button |
+| **Jennifer** | Solo Traveler | Silent SOS, GPS sharing, multi-language |
+| **Kapitan Boter** | Barangay Captain | Mass notification, multi-agency command |
+
+For detailed personas with full scenarios, see: **[personas-detailed.md](personas-detailed.md)**
 
 ### User Needs
 
@@ -114,8 +136,17 @@ For detailed personas with full scenarios, see: **[personas-detailed.md](persona
 **Nice to Have:**
 - Anonymous reporting mode (for sensitive situations)
 - In-car display for patrol vehicles
-- Offline/SMS fallback for disasters
 - Multi-language support
+
+### Extended Features (See Feature Specifications)
+
+For detailed specifications of additional features, see:
+
+| Feature | Specification File | Priority |
+|---------|-------------------|----------|
+| Silent SOS | [silent-sos-spec.md](feature-specs/silent-sos-spec.md) | High |
+| SMS/USSD Fallback | [sms-ussd-fallback-spec.md](feature-specs/sms-ussd-fallback-spec.md) | High |
+| Multi-Agency Escalation | [multi-agency-escalation-spec.md](feature-specs/multi-agency-escalation-spec.md) | High |
 
 ---
 
@@ -172,7 +203,7 @@ A **decentralized** emergency response platform where responders see emergencies
    - User Value: Reduced false reports, verified responders
 
 7. **First Aider Network (Automatic Alerts)**
-   - First aiders register profession/training in their profile
+   - First Aiders register profession/training in their profile
    - System **automatically alerts** them when matching emergency occurs nearby:
      - Nurses/Doctors → Ambulance/Medical emergencies
      - Fire-trained → Fire emergencies
@@ -188,6 +219,26 @@ A **decentralized** emergency response platform where responders see emergencies
    - Can contact nearest unit if no one responds
    - Coordinates during mass emergencies/disasters
    - Useful for barangay-level coordination where not all tanods have phones
+
+9. **Silent SOS**
+   - Hidden emergency activation via long-press, shake, or tap pattern
+   - Works in background without sound or visible indicators
+   - Automatic location capture and dispatch
+   - Ideal for dangerous situations (abduction, stalking, domestic violence)
+   - See: [silent-sos-spec.md](feature-specs/silent-sos-spec.md)
+
+10. **SMS/USSD Fallback**
+    - Emergency reporting via SMS when internet is unavailable
+    - Works on basic phones (no smartphone required)
+    - Critical for Philippines disaster scenarios
+    - See: [sms-ussd-fallback-spec.md](feature-specs/sms-ussd-fallback-spec.md)
+
+11. **Multi-Agency Escalation**
+    - Automatic detection when emergency requires multiple agencies
+    - Simultaneous dispatch of Police, Ambulance, Fire as needed
+    - Scene commander designation and handoff protocols
+    - Unified incident tracking across all agencies
+    - See: [multi-agency-escalation-spec.md](feature-specs/multi-agency-escalation-spec.md)
 
 ### What Makes This Different
 
@@ -207,11 +258,13 @@ A **decentralized** emergency response platform where responders see emergencies
 - Responder mobile app
 - Real-time location tracking
 - Status notifications
+- **Silent SOS** - Silent emergency activation for dangerous situations (see [silent-sos-spec.md](feature-specs/silent-sos-spec.md))
+- **SMS/USSD Fallback** - Offline emergency reporting (see [sms-ussd-fallback-spec.md](feature-specs/sms-ussd-fallback-spec.md))
+- **Multi-Agency Escalation** - Auto-dispatch multiple agencies (see [multi-agency-escalation-spec.md](feature-specs/multi-agency-escalation-spec.md))
 
 **Deferred to Later:**
 - In-car display integration
 - Multi-language support (beyond Tagalog/English)
-- SMS fallback
 - API integration with existing government systems
 
 ---
@@ -530,5 +583,6 @@ Initial discovery conducted with product owner (Jan Dave Zamora).
 ---
 
 **Document Status:** Draft
-**Last Updated:** 2026-03-05
+**Last Updated:** 2026-03-13
+**Version:** 1.2
 **Next Review Date:** TBD
