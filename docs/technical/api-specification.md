@@ -187,7 +187,29 @@ GET /users/me
   "email": "user@example.com",
   "first_name": "Juan",
   "last_name": "Dela Cruz",
-  "role": "CITIZEN",
+  "role": {
+    "primary": "CITIZEN",
+    "is_first_aider": true,
+    "first_aider_profession": "NURSE",
+    "first_aider_license": "PRC-123456",
+    "is_verified_first_aider": true
+  },
+  "emergency_contacts": [
+    {
+      "id": "contact-uuid-1",
+      "name": "Maria Dela Cruz",
+      "phone": "+639123456789",
+      "relationship": "Spouse",
+      "is_primary": true
+    },
+    {
+      "id": "contact-uuid-2",
+      "name": "Pedro Zamora",
+      "phone": "+639987654321",
+      "relationship": "Friend",
+      "is_primary": false
+    }
+  ],
   "profile_image_url": "https://...",
   "is_verified": true,
   "created_at": "2026-01-01T00:00:00Z"
@@ -215,101 +237,35 @@ PUT /users/me
 GET /users/me/emergency-contacts
 ```
 
-### 4.4 Add Emergency Contact
-
-```
-POST /users/me/emergency-contacts
-```
-
-**Request:**
-```json
-{
-  "name": "Maria Dela Cruz",
-  "phone": "+639123456789",
-  "relationship": "Spouse",
-  "is_primary": true
-}
-```
-
-### 4.5 Delete Emergency Contact
-
-```
-DELETE /users/me/emergency-contacts/{id}
-```
-
-### 4.6 Get Relationship Types
-
-```
-GET /users/relationship-types
-```
-
 **Response:**
 ```json
 {
   "data": [
-    { "id": "spouse", "name": "Spouse" },
-    { "id": "parent", "name": "Parent" },
-    { "id": "child", "name": "Child" },
-    { "id": "sibling", "name": "Sibling" },
-    { "id": "friend", "name": "Friend" },
-    { "id": "colleague", "name": "Colleague" },
-    { "id": "neighbor", "name": "Neighbor" },
-    { "id": "other", "name": "Other" }
-  ]
+    {
+      "id": "contact-uuid-1",
+      "name": "Maria Dela Cruz",
+      "phone": "+639123456789",
+      "relationship": "Spouse",
+      "is_primary": true
+    },
+    {
+      "id": "contact-uuid-2",
+      "name": "Pedro Zamora",
+      "phone": "+639987654321",
+      "relationship": "Friend",
+      "is_primary": false
+    },
+    {
+      "id": "contact-uuid-3",
+      "name": "Juan Luna",
+      "phone": "+639555123456",
+      "relationship": "Colleague",
+      "is_primary": false
+    }
+  ],
+  "total": 3,
+  "primary_contact_id": "contact-uuid-1"
 }
-```
-
-### 4.7 Notify Emergency Contacts
-
-```
-POST /users/me/emergency-contacts/notify
-```
-
-**Request:**
-```json
-{
-  "incident_id": "EMG-2026-0142",
-  "message": "I have reported an emergency and need help"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "notified": ["contact-1", "contact-2"],
-  "failed": []
-}
-```
-
----
-
-## 5. Public Emergency Contacts API
-
-### 4.2 Update Profile
-
-```
-PUT /users/me
-```
-
-### 4.3 Get My Emergency Contacts
-
-```
-GET /users/me/emergency-contacts
-```
-
-**Response:**
-```json
-[
-  {
-    "id": "contact-uuid",
-    "name": "Maria Dela Cruz",
-    "phone": "+639123456789",
-    "relationship": "Spouse",
-    "is_primary": true
-  }
-]
-```
 
 ### 4.4 Add Emergency Contact
 
@@ -337,7 +293,21 @@ PUT /users/me/emergency-contacts/{id}
 ```json
 {
   "name": "Maria Updated",
+  "phone": "+639123456789",
+  "relationship": "Parent",
   "is_primary": false
+}
+```
+
+**Response:**
+```json
+{
+  "id": "contact-uuid",
+  "name": "Maria Updated",
+  "phone": "+639123456789",
+  "relationship": "Parent",
+  "is_primary": false,
+  "updated_at": "2026-03-13T10:30:00Z"
 }
 ```
 
@@ -347,7 +317,29 @@ PUT /users/me/emergency-contacts/{id}
 DELETE /users/me/emergency-contacts/{id}
 ```
 
-### 4.7 Notify Emergency Contacts
+### 4.7 Get Relationship Types
+
+```
+GET /users/relationship-types
+```
+
+**Response:**
+```json
+{
+  "data": [
+    { "id": "spouse", "name": "Spouse" },
+    { "id": "parent", "name": "Parent" },
+    { "id": "child", "name": "Child" },
+    { "id": "sibling", "name": "Sibling" },
+    { "id": "friend", "name": "Friend" },
+    { "id": "colleague", "name": "Colleague" },
+    { "id": "neighbor", "name": "Neighbor" },
+    { "id": "other", "name": "Other" }
+  ]
+}
+```
+
+### 4.8 Notify Emergency Contacts
 
 ```
 POST /users/me/emergency-contacts/notify
