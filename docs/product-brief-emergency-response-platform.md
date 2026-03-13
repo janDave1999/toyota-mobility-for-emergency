@@ -147,6 +147,9 @@ For detailed specifications of additional features, see:
 | Silent SOS | [silent-sos-spec.md](feature-specs/silent-sos-spec.md) | High |
 | SMS/USSD Fallback | [sms-ussd-fallback-spec.md](feature-specs/sms-ussd-fallback-spec.md) | High |
 | Multi-Agency Escalation | [multi-agency-escalation-spec.md](feature-specs/multi-agency-escalation-spec.md) | High |
+| Disaster Mode / NDRRMC | [remaining-features.md](feature-specs/remaining-features.md) | High (Not yet specified) |
+| Admin Analytics Dashboard | [remaining-features.md](feature-specs/remaining-features.md) | Medium (Not yet specified) |
+| Responder Scheduling | [remaining-features.md](feature-specs/remaining-features.md) | Medium (Not yet specified) |
 
 ---
 

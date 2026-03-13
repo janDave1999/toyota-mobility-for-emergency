@@ -566,25 +566,333 @@ Arlene has lived in Tondo her whole life. She's seen many fires - some accidenta
 
 ---
 
+## Persona 10: Lolo Juan
+
+**Age:** 75 years old  
+**Role:** Elderly Citizen  
+**Location:** Binangonan, Rizal
+
+### Demographics
+
+| Attribute | Details |
+|-----------|---------|
+| **Location** | Binangonan, Rizal |
+| **Demographics** | Widowed, 3 children, 5 grandchildren |
+| **Profession** | Retired farmer |
+| **Income** | Pension PHP 5,000/month |
+| **Tech Proficiency** | Low - can make calls only |
+| **Phone** | Basic phone (Nokia) + smartphone (grandson's old phone) |
+
+### Background
+
+Lolo Juan lives alone in a small house near the river. His children work in Manila and visit occasionally. He has hypertension and diabetes. He's had falls before and worries about being alone if something happens.
+
+### Goals
+
+- Get help quickly if he falls or has a medical emergency
+- Be able to call his children easily
+- Not be a burden to anyone
+
+### Frustrations
+
+- Can't remember complicated codes or apps
+- Phone screen is too small
+- Can't speak loudly after his stroke
+- Worries about being found if he collapses
+
+### Scenario - The Fall
+
+> It's 7:00 AM. Lolo Juan wakes up to use the bathroom. On his way, he slips on the wet floor. He falls hard and can't get up. His phone is on the table.
+>
+> **7:01 AM** - He tries to call for help but his voice is weak. He can't reach his phone.
+>
+> **7:15 AM** - He manages to crawl to his phone. He tries to call his daughter but she's at work. He doesn't know what number to call for emergency.
+>
+> **7:30 AM** - His neighbor comes by and sees him on the floor. The neighbor calls for an ambulance.
+>
+> **8:00 AM** - Ambulance arrives. The doctor says Lolo Juan had a stroke.
+
+### How This Product Helps Lolo Juan
+
+- **Voice command** activation: "Help me" works even if he can't reach phone
+- **Silent SOS**: Long-press power button sends alert without speaking
+- **Large text mode**: If he uses smartphone, text is big
+- **Medical ID**: Shows his hypertension and diabetes conditions
+- **Pre-registered contacts**: Children automatically notified
+
+---
+
+## Persona 11: Ana
+
+**Age:** 32 years old  
+**Role:** Hearing Impaired / Deaf Community  
+**Location:** Quezon City
+
+### Demographics
+
+| Attribute | Details |
+|-----------|---------|
+| **Location** | Quezon City |
+| **Demographics** | Single, no children |
+| **Profession** | Working student - freelance designer |
+| **Income** | PHP 15,000-20,000/month |
+| **Tech Proficiency** | High - uses video calls, SMS, apps |
+| **Phone** | iPhone 14 |
+
+### Background
+
+Ana was born deaf and communicates through sign language, written text, and video calls. She works from home as a freelance designer. She worries about emergencies where she can't hear sirens or voice calls.
+
+### Goals
+
+- Get help during emergencies without voice calls
+- Communicate with responders via text
+- Be alerted visually (not just sound)
+
+### Frustrations
+
+- Can't hear sirens or voice calls
+- Most emergency systems require voice
+- Can't call 911 and explain via voice
+- Misses important announcements
+
+### Scenario - The Fire
+
+> It's 2:00 AM. Ana is asleep when the building fire alarm goes off. She can't hear it. Smoke starts coming under her door.
+>
+> **2:01 AM** - She wakes up because she feels the smoke. She sees the flashing lights from the hallway but doesn't know what's happening.
+>
+> **2:02 AM** - She grabs her phone. She can't call anyone. She tries to open the door but there's smoke.
+>
+> **2:05 AM** - She sends a text to her friend who lives nearby: "Fire in building, I'm trapped on 5th floor"
+>
+> **2:10 AM** - Her friend calls the fire department and gives Ana's location.
+>
+> **2:15 AM** - Firefighters arrive and rescue Ana.
+
+### How This Product Helps Ana
+
+- **Text-only reporting**: Complete emergency form via text
+- **Visual alerts**: Screen flashes, not just vibration
+- **Silent SOS**: Works without sound
+- **In-app chat**: Communicates with responders via text
+- **SMS fallback**: Works even without app
+
+---
+
+## Persona 12: Paolo
+
+**Age:** 16 years old  
+**Role:** High School Student  
+**Location:** Manila
+
+### Demographics
+
+| Attribute | Details |
+|-----------|---------|
+| **Location** | Manila |
+| **Demographics** | Single, lives with parents |
+| **Role** | High School student (Grade 11) |
+| **Income** | Allowance PHP 500/week |
+| **Tech Proficiency** | High - heavy smartphone user |
+| **Phone** | Android (Samsung A24) |
+
+### Background
+
+Paolo is a junior student in a private school in Manila. He's often in situations where he witnesses fights or bullying but is afraid to intervene openly. He wants a way to get help discreetly.
+
+### Goals
+
+- Get help during school emergencies without drawing attention
+- Report bullying or fights safely
+- Not be seen as a "snitch" by classmates
+- Get quick response from school security
+
+### Frustrations
+
+- Can't call openly during class
+- Phone might be confiscated
+- Teachers don't always take reports seriously
+- Fights escalate because no one reports
+
+### Scenario - The Fight
+
+> It's 11:00 AM, recess time. Paolo is in the canteen when he sees a group of seniors beating up a younger student. It's getting violent.
+>
+> **11:01 AM** - Paolo wants to help but there are 5 seniors and he's alone. He's afraid they'll turn on him.
+>
+> **11:02 AM** - He quietly takes out his phone under the table. He activates Silent SOS with a quick triple-tap.
+>
+> **11:03 AM** - System sends his location to school security and local police.
+>
+> **11:05 AM** - Security arrives at the canteen. The seniors run away.
+>
+> **11:07 AM** - Paolo is recognized as the one who called for help. He's praised, not ostracized.
+
+### How This Product Helps Paolo
+
+- **Discreet activation**: Quick tap pattern works under the table
+- **Silent dispatch**: Security approaches without sirens
+- **School-specific routing**: Report goes to school security + police
+- **Anonymous option**: Can report without revealing identity to bullies
+- **Location accuracy**: Exact location in school building
+
+---
+
+## Persona 13: Jennifer
+
+**Age:** 26 years old  
+**Role:** Solo Female Traveler  
+**Location:** Palawan (currently)
+
+### Demographics
+
+| Attribute | Details |
+|-----------|---------|
+| **Location** | Visiting El Nido, Palawan (from Australia) |
+| **Demographics** | Single, no children, travel blogger |
+| **Income** | AUD 4,000/month |
+| **Education** | Bachelor's degree |
+| **Tech Proficiency** | High - apps, translation, maps |
+| **Phone** | iPhone 15, roaming data |
+
+### Background
+
+Jennifer is an Australian travel blogger exploring the Philippines solo. She's on a 2-week trip to Palawan. She's aware of safety concerns for solo female travelers and wants a reliable emergency option.
+
+### Goals
+
+- Stay safe while traveling alone
+- Know how to get help quickly
+- Have peace of mind for her family back home
+- Not be a burden on local resources
+
+### Frustrations
+
+- Doesn't know local emergency numbers
+- Data roaming is expensive/unreliable
+- Language barrier in emergencies
+- No one knows where she is when traveling
+
+### Scenario - The Suspicious Follower
+
+> It's 8:00 PM. Jennifer is walking back to her hotel from dinner. She notices a man on a motorcycle has been following her for the past two blocks.
+>
+> **8:02 PM** - She walks faster. The motorcycle speeds up.
+>
+> **8:03 PM** - She activates Silent SOS with a quick shake. Location sent to local police.
+>
+> **8:04 PM** - She calls her hotel and asks them to send someone to meet her.
+>
+> **8:06 PM** - She sees a police patrol car approaching. The man on the motorcycle speeds away.
+>
+> **8:10 PM** - Police check on her and escort her to her hotel.
+
+### How This Product Helps Jennifer
+
+- **International phone works**: SMS-based reporting works with any number
+- **Silent SOS**: Discreet activation in dangerous situations
+- **Location sharing**: Family and authorities know exact location
+- **Multi-language**: English support for tourists
+- **Pre-registration**: Travel insurance info accessible to responders
+
+---
+
+## Persona 14: Kapitan Boter
+
+**Age:** 52 years old  
+**Role:** Barangay Captain  
+**Location:** Brgy. San Antonio, Makati
+
+### Demographics
+
+| Attribute | Details |
+|-----------|---------|
+| **Location** | Brgy. San Antonio, Makati |
+| **Demographics** | Married, 4 children |
+| **Profession** | Barangay Captain (elected) + Businessman |
+| **Income** | PHP 80,000/month (includes business) |
+| **Tech Proficiency** | Moderate - uses Viber, Facebook, smartphone |
+| **Phone** | iPhone 14 Pro |
+
+### Background
+
+Kapitan Boter has been barangay captain for 8 years. He's responsible for 15,000 residents in his barangay. He needs to coordinate emergency response, disaster management, and communicate with residents quickly.
+
+### Goals
+
+- Keep his barangay safe
+- Communicate quickly with all residents during emergencies
+- Coordinate with police, fire, and ambulance
+- Track incidents in his barangay
+
+### Frustrations
+
+- No fast way to alert all residents
+- Hard to know what's happening in real-time
+- Limited communication with higher agencies
+- Paper-based reporting is slow
+
+### Scenario - The Flash Flood
+
+> It's 3:00 AM. Heavy rains cause flash flooding in low-lying areas of the barangay. Kapitan Boter gets a call from a tanod that water is rising fast.
+>
+> **3:05 AM** - He opens the app and sends a mass alert: "FLOOD WARNING - Evacuate to higher ground immediately"
+>
+> **3:06 AM** - 3,000 residents receive the alert on their phones
+>
+> **3:07 AM** - Residents start evacuating. Some respond that they're safe, others need help.
+>
+> **3:15 AM** - Kapitan Boter sees on his dashboard: 500 evacuated, 50 need rescue, 10 injured.
+>
+> **3:20 AM** - He coordinates rescue for those trapped and dispatches to injured.
+>
+> **5:00 AM** - All residents safe. He generates a report for the city.
+
+### How This Product Helps Kapitan Boter
+
+- **Mass notification**: Alert all residents in seconds
+- **Location-based alerts**: Alert only those in danger zones
+- **Real-time dashboard**: See all incidents in barangay
+- **Multi-agency coordination**: Police, fire, ambulance work together
+- **Incident reports**: Auto-generate reports for accountability
+
+---
+
 ## Persona Summary Table
 
-| # | Name | Age | Role | Tech Level | Key Pain Point |
-|---|------|-----|------|-------------|----------------|
-| 1 | Maria Santos | 35 | Mother / Citizen | Average | Can't remember emergency numbers |
-| 2 | Sgt. Juan Dela Cruz | 42 | Police Sergeant | Moderate | Vague locations, can't contact callers |
-| 3 | Elena Rivera | 38 | Station Monitor | High | Overwhelmed in old system, now monitors support |
-| 4 | Dr. Sarah Binay | 29 | Nurse / First Aider | High | No way to help nearby emergencies |
-| 5 | Mang Jose Reyes | 58 | Tricycle Driver | Low | No phone, no numbers to call |
-| 6 | Marites Bulalakaw | 45 | Witness to Abuse | Low | Fear, doesn't know who to call for domestic violence |
-| 7 | Junjun Mañalac | 24 | Barangay Tanod | Low-Moderate | Poor communication, can't call for backup |
-| 8 | Mary Anderson | 28 | Tourist | High | Doesn't know local emergency numbers, language barrier |
-| 9 | Arlene Martinez | 50 | Witness to Fire | Low | Can't report exact location, fire spreads while waiting |
+| # | Name | Age | Role | Tech Level | Key Pain Point | Uses New Features |
+|---|------|-----|------|-------------|----------------|-------------------|
+| 1 | Maria Santos | 35 | Mother / Citizen | Average | Can't remember emergency numbers | All features |
+| 2 | Sgt. Juan Dela Cruz | 42 | Police Sergeant | Moderate | Vague locations, can't contact callers | Multi-agency |
+| 3 | Elena Rivera | 38 | Station Monitor | High | Overwhelmed in old system, now monitors support | Multi-agency dashboard |
+| 4 | Dr. Sarah Binay | 29 | First Aider / Nurse | High | No way to help nearby emergencies | First Aider alerts |
+| 5 | Mang Jose Reyes | 58 | Tricycle Driver | Low | No phone, no numbers to call | SMS/USSD fallback |
+| 6 | Marites Bulalakaw | 45 | Witness to Abuse | Low | Fear, doesn't know who to call | Silent SOS |
+| 7 | Junjun Mañalac | 24 | Barangay Tanod | Low-Moderate | Poor communication, can't call for backup | SMS/USSD, Multi-agency |
+| 8 | Mary Anderson | 28 | Tourist | High | Doesn't know local emergency numbers, language barrier | SMS/USSD |
+| 9 | Arlene Martinez | 50 | Witness to Fire | Low | Can't report exact location, fire spreads while waiting | All features |
+| 10 | Lolo Juan | 75 | Elderly Citizen | Low | Can't speak loudly, fears being found | Silent SOS, Voice command |
+| 11 | Ana | 32 | Hearing Impaired | High | Can't hear sirens, emergency systems require voice | SMS fallback, Text-only |
+| 12 | Paolo | 16 | Student | High | Can't call openly during class | Silent SOS |
+| 13 | Jennifer | 26 | Solo Traveler | High | Doesn't know local numbers, data roaming | Silent SOS, SMS fallback |
+| 14 | Kapitan Boter | 52 | Barangay Captain | Moderate | No fast way to alert residents | Mass notification, Multi-agency |
 
 ---
 
 **Note on System Model:** This platform uses a **decentralized model** where responders see emergencies directly. Dispatchers (like Elena) serve as a support/monitoring layer.
 
+## Related Documents
+
+| Document | Description |
+|----------|-------------|
+| [product-brief-emergency-response-platform.md](../product-brief-emergency-response-platform.md) | Main product brief |
+| [feature-specs/silent-sos-spec.md](../feature-specs/silent-sos-spec.md) | Silent SOS Feature Specification |
+| [feature-specs/sms-ussd-fallback-spec.md](../feature-specs/sms-ussd-fallback-spec.md) | SMS/USSD Fallback Specification |
+| [feature-specs/multi-agency-escalation-spec.md](../feature-specs/multi-agency-escalation-spec.md) | Multi-Agency Escalation Specification |
+| [user-journey-maps.md](../user-journey-maps.md) | User Journey Maps |
+
 ---
 
-**Document Version:** 1.3  
-**Last Updated:** 2026-03-05
+**Document Version:** 1.4  
+**Last Updated:** 2026-03-13
