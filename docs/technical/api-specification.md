@@ -237,9 +237,211 @@ POST /users/me/emergency-contacts
 DELETE /users/me/emergency-contacts/{id}
 ```
 
+### 4.6 Get Relationship Types
+
+```
+GET /users/relationship-types
+```
+
+**Response:**
+```json
+{
+  "data": [
+    { "id": "spouse", "name": "Spouse" },
+    { "id": "parent", "name": "Parent" },
+    { "id": "child", "name": "Child" },
+    { "id": "sibling", "name": "Sibling" },
+    { "id": "friend", "name": "Friend" },
+    { "id": "colleague", "name": "Colleague" },
+    { "id": "neighbor", "name": "Neighbor" },
+    { "id": "other", "name": "Other" }
+  ]
+}
+```
+
+### 4.7 Notify Emergency Contacts
+
+```
+POST /users/me/emergency-contacts/notify
+```
+
+**Request:**
+```json
+{
+  "incident_id": "EMG-2026-0142",
+  "message": "I have reported an emergency and need help"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "notified": ["contact-1", "contact-2"],
+  "failed": []
+}
+```
+
 ---
 
-## 5. Incident API
+## 5. Public Emergency Contacts API
+
+### 4.2 Update Profile
+
+```
+PUT /users/me
+```
+
+### 4.3 Get My Emergency Contacts
+
+```
+GET /users/me/emergency-contacts
+```
+
+**Response:**
+```json
+[
+  {
+    "id": "contact-uuid",
+    "name": "Maria Dela Cruz",
+    "phone": "+639123456789",
+    "relationship": "Spouse",
+    "is_primary": true
+  }
+]
+```
+
+### 4.4 Add Emergency Contact
+
+```
+POST /users/me/emergency-contacts
+```
+
+**Request:**
+```json
+{
+  "name": "Maria Dela Cruz",
+  "phone": "+639123456789",
+  "relationship": "Spouse",
+  "is_primary": true
+}
+```
+
+### 4.5 Update Emergency Contact
+
+```
+PUT /users/me/emergency-contacts/{id}
+```
+
+**Request:**
+```json
+{
+  "name": "Maria Updated",
+  "is_primary": false
+}
+```
+
+### 4.6 Delete Emergency Contact
+
+```
+DELETE /users/me/emergency-contacts/{id}
+```
+
+### 4.7 Notify Emergency Contacts
+
+```
+POST /users/me/emergency-contacts/notify
+```
+
+**Request:**
+```json
+{
+  "incident_id": "EMG-2026-0142",
+  "message": "I have reported an emergency and need help"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "notified": ["contact-1", "contact-2"],
+  "failed": []
+}
+```
+
+---
+
+## 5. Public Emergency Contacts API
+
+### 5.1 Get Emergency Hotlines
+
+```
+GET /public/emergency-contacts
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| region | string | Filter by region (e.g., NCR, CALABARZON) |
+| city | string | Filter by city |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "hotline-uuid",
+      "name": "PNP Emergency Hotline",
+      "type": "POLICE",
+      "phone": "911",
+      "region": "NCR",
+      "city": "Manila",
+      "is_24h": true
+    },
+    {
+      "id": "hotline-uuid",
+      "name": "BFP Fire Hotline",
+      "type": "FIRE",
+      "phone": "911",
+      "region": "NCR",
+      "city": "Manila",
+      "is_24h": true
+    },
+    {
+      "id": "hotline-uuid",
+      "name": "RDRRMC Central Visayas",
+      "type": "AMBULANCE",
+      "phone": "(032) 123-4567",
+      "region": "Region VII",
+      "city": "Cebu City",
+      "is_24h": true
+    }
+  ]
+}
+```
+
+### 5.2 Get Emergency Contact by Type
+
+```
+GET /public/emergency-contacts/type/{type}
+```
+
+**Types:** `POLICE`, `AMBULANCE`, `FIRE`, `DISASTER`
+
+```
+GET /public/emergency-contacts/type/POLICE
+```
+
+### 5.3 Search Emergency Contacts
+
+```
+GET /public/emergency-contacts/search?q=Manila
+```
+
+---
+
+## 6. Incident API
 
 ### 5.1 Create Incident
 
