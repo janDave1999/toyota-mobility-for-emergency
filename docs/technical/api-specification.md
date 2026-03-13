@@ -17,6 +17,7 @@
 |---------|------|--------|---------|
 | 1.0 | 2026-03-13 | Jan Dave Zamora | Initial version |
 | 1.1 | 2026-03-13 | Jan Dave Zamora | Added Supabase PostGIS, SMS/USSD, Silent SOS, Cloudflare R2 endpoints |
+| 1.2 | 2026-03-13 | Jan Dave Zamora | Added Agency API section, updated User role to object, fixed section numbering |
 
 ---
 
@@ -435,7 +436,7 @@ GET /public/emergency-contacts/search?q=Manila
 
 ## 6. Incident API
 
-### 5.1 Create Incident
+### 6.1 Create Incident
 
 ```
 POST /incidents
@@ -452,7 +453,8 @@ POST /incidents
   "address": "Taft Avenue, Manila",
   "landmark": "Near 7-Eleven",
   "is_silent": false,
-  "is_anonymous": false
+  "is_anonymous": false,
+  "reporter_id": "user-uuid"
 }
 ```
 
@@ -473,7 +475,7 @@ POST /incidents
 }
 ```
 
-### 5.2 Get Incident
+### 6.2 Get Incident
 
 ```
 GET /incidents/{id}
@@ -527,7 +529,7 @@ GET /incidents/{id}
 }
 ```
 
-### 5.3 Get Active Incidents
+### 6.3 Get Active Incidents
 
 ```
 GET /incidents?status=ACTIVE&latitude=14.5995&longitude=120.9842&radius=5
@@ -544,7 +546,7 @@ GET /incidents?status=ACTIVE&latitude=14.5995&longitude=120.9842&radius=5
 | page | number | Page number |
 | limit | number | Items per page (default 20) |
 
-### 5.4 Update Incident Status
+### 6.4 Update Incident Status
 
 ```
 PUT /incidents/{id}/status
@@ -558,13 +560,13 @@ PUT /incidents/{id}/status
 }
 ```
 
-### 5.5 Get Incident Timeline
+### 6.5 Get Incident Timeline
 
 ```
 GET /incidents/{id}/timeline
 ```
 
-### 5.6 Add Incident Comment
+### 6.6 Add Incident Comment
 
 ```
 POST /incidents/{id}/comments
@@ -577,7 +579,7 @@ POST /incidents/{id}/comments
 }
 ```
 
-### 5.7 Cancel Incident
+### 6.7 Cancel Incident
 
 ```
 POST /incidents/{id}/cancel
@@ -592,21 +594,247 @@ POST /incidents/{id}/cancel
 
 ---
 
-## 6. Responder API
+## 7. Agency API
 
-### 6.1 Get Available Incidents
+### 7.1 List Agencies
+
+```
+GET /agencies
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| type | string | Filter by type: POLICE, FIRE, AMBULANCE, DISASTER |
+| region | string | Filter by region |
+| is_active | boolean | Filter active agencies |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "agency-uuid",
+      "name": "PNP National Headquarters",
+      "type": "POLICE",
+      "code": "PNP",
+      "region": "NCR",
+      "city": "Quezon City",
+      "phone": "+63287211111",
+      "email": "info@pnp.gov.ph",
+      "is_active": true,
+      "responder_count": 150,
+      "available_responders": 45
+    },
+    {
+      "id": "agency-uuid-2",
+      "name": "BFP National Headquarters",
+      "type": "FIRE",
+      "code": "BFP",
+      "region": "NCR",
+      "city": "Manila",
+      "phone": "+63284261111",
+      "email": "bfp@bfp.gov.ph",
+      "is_active": true,
+      "responder_count": 80,
+      "available_responders": 20
+    }
+  ],
+  "total": 2,
+  "page": 1,
+  "limit": 20
+}
+```
+
+### 7.2 Get Agency Details
+
+```
+GET /agencies/{id}
+```
+
+**Response:**
+```json
+{
+  "id": "agency-uuid",
+  "name": "PNP National Headquarters",
+  "type": "POLICE",
+  "code": "PNP",
+  "region": "NCR",
+  "city": "Quezon City",
+  "address": "Camp Crame, Quezon City",
+  "phone": "+63287211111",
+  "email": "info@pnp.gov.ph",
+  "website": "https://pnp.gov.ph",
+  "is_active": true,
+  "created_at": "2025-01-01T00:00:00Z",
+  "statistics": {
+    "total_incidents": 1500,
+    "resolved_incidents": 1450,
+    "average_response_time_minutes": 8.5,
+    "total_responders": 150,
+    "available_responders": 45
+  }
+}
+```
+
+### 7.3 Get Agency Responders
+
+```
+GET /agencies/{id}/responders
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| status | string | AVAILABLE, BUSY, OFF_DUTY |
+| unit | string | Filter by unit name |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "responder-uuid",
+      "user_id": "user-uuid",
+      "name": "Sgt. Juan Dela Cruz",
+      "badge_number": "PNP-12345",
+      "rank": "Sergeant",
+      "unit": "Mobile Force Company",
+      "status": "AVAILABLE",
+      "current_incident_id": null,
+      "latitude": 14.5995,
+      "longitude": 120.9842,
+      "last_status_update": "2026-03-13T10:30:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### 7.4 Add Responder (Agency Admin)
+
+```
+POST /agencies/{id}/responders
+```
+
+**Request:**
+```json
+{
+  "user_id": "user-uuid",
+  "badge_number": "PNP-12345",
+  "rank": "Sergeant",
+  "unit": "Mobile Force Company",
+  "status": "AVAILABLE"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "responder-uuid",
+  "agency_id": "agency-uuid",
+  "user_id": "user-uuid",
+  "name": "Sgt. Juan Dela Cruz",
+  "badge_number": "PNP-12345",
+  "rank": "Sergeant",
+  "unit": "Mobile Force Company",
+  "status": "AVAILABLE",
+  "created_at": "2026-03-13T10:30:00Z"
+}
+```
+
+### 7.5 Update Responder (Agency Admin)
+
+```
+PUT /agencies/{id}/responders/{responder_id}
+```
+
+**Request:**
+```json
+{
+  "rank": "Staff Sergeant",
+  "unit": "Special Action Force",
+  "status": "OFF_DUTY"
+}
+```
+
+### 7.6 Remove Responder (Agency Admin)
+
+```
+DELETE /agencies/{id}/responders/{responder_id}
+```
+
+### 7.7 Get Agency Incidents
+
+```
+GET /agencies/{id}/incidents
+```
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| status | string | RECEIVED, DISPATCHED, EN_ROUTE, ON_SCENE, RESOLVED |
+| date_from | date | Filter from date |
+| date_to | date | Filter to date |
+
+### 7.8 Get Agency Statistics
+
+```
+GET /agencies/{id}/statistics
+```
+
+**Response:**
+```json
+{
+  "today": {
+    "incidents_handled": 15,
+    "responders_deployed": 25,
+    "average_response_time_minutes": 7.2
+  },
+  "this_week": {
+    "incidents_handled": 95,
+    "responders_deployed": 150,
+    "average_response_time_minutes": 8.1
+  },
+  "this_month": {
+    "incidents_handled": 420,
+    "responders_deployed": 680,
+    "average_response_time_minutes": 8.5
+  }
+}
+```
+
+### 7.9 Agency Admin Management
+
+```
+POST /agencies/{id}/admins
+```
+
+**Request:**
+```json
+{
+  "user_id": "user-uuid",
+  "role": "ADMIN"
+}
+```
+
+---
+
+## 8. Responder API
+
+### 8.1 Get Available Incidents
 
 ```
 GET /responders/incidents?latitude=14.5995&longitude=120.9842&type=MEDICAL
 ```
 
-### 6.2 Accept Dispatch
+### 8.2 Accept Dispatch
 
 ```
 POST /dispatch/{dispatch_id}/accept
 ```
 
-### 6.3 Decline Dispatch
+### 8.3 Decline Dispatch
 
 ```
 POST /dispatch/{dispatch_id}/decline
@@ -619,7 +847,7 @@ POST /dispatch/{dispatch_id}/decline
 }
 ```
 
-### 6.4 Update Status
+### 8.4 Update Status
 
 ```
 PUT /responders/me/status
@@ -634,7 +862,7 @@ PUT /responders/me/status
 }
 ```
 
-### 6.5 Update Location
+### 8.5 Update Location
 
 ```
 PUT /responders/me/location
@@ -652,7 +880,7 @@ PUT /responders/me/location
 }
 ```
 
-### 6.6 Request Backup
+### 8.6 Request Backup
 
 ```
 POST /incidents/{id}/backup
@@ -668,7 +896,7 @@ POST /incidents/{id}/backup
 
 ---
 
-## 7. First Aider API
+## 9. First Aider API
 
 ### 7.1 Register as First Aider
 
@@ -707,21 +935,21 @@ POST /first-aiders/incidents/{id}/decline
 
 ---
 
-## 8. Dispatcher API
+## 10. Dispatcher API
 
-### 8.1 Get All Active Incidents
+### 10.1 Get All Active Incidents
 
 ```
 GET /dispatcher/incidents?status=ACTIVE
 ```
 
-### 8.2 Get All Responders
+### 10.2 Get All Responders
 
 ```
 GET /dispatcher/responders?agency=PNP&status=AVAILABLE
 ```
 
-### 8.3 Manual Dispatch
+### 10.3 Manual Dispatch
 
 ```
 POST /dispatcher/incidents/{id}/dispatch
@@ -735,7 +963,7 @@ POST /dispatcher/incidents/{id}/dispatch
 }
 ```
 
-### 8.4 Escalate Incident
+### 10.4 Escalate Incident
 
 ```
 POST /dispatcher/incidents/{id}/escalate
@@ -748,7 +976,7 @@ POST /dispatcher/incidents/{id}/escalate
 }
 ```
 
-### 8.5 Transfer Command
+### 10.5 Transfer Command
 
 ```
 POST /dispatcher/incidents/{id}/transfer-command
@@ -764,21 +992,21 @@ POST /dispatcher/incidents/{id}/transfer-command
 
 ---
 
-## 9. Notification API
+## 11. Notification API
 
-### 9.1 Get Notifications
+### 11.1 Get Notifications
 
 ```
 GET /notifications?limit=20&unread=true
 ```
 
-### 9.2 Mark as Read
+### 11.2 Mark as Read
 
 ```
 PUT /notifications/{id}/read
 ```
 
-### 9.3 Update Notification Preferences
+### 11.3 Update Notification Preferences
 
 ```
 PUT /users/me/notification-preferences
@@ -796,15 +1024,15 @@ PUT /users/me/notification-preferences
 
 ---
 
-## 10. Message/Chat API
+## 12. Message/Chat API
 
-### 10.1 Get Messages
+### 12.1 Get Messages
 
 ```
 GET /incidents/{id}/messages
 ```
 
-### 10.2 Send Message
+### 12.2 Send Message
 
 ```
 POST /incidents/{id}/messages
@@ -820,9 +1048,9 @@ POST /incidents/{id}/messages
 
 ---
 
-## 11. Media API
+## 13. Media API
 
-### 11.1 Upload Media
+### 13.1 Upload Media
 
 ```
 POST /incidents/{id}/media
@@ -839,7 +1067,7 @@ POST /incidents/{id}/media
 }
 ```
 
-### 11.2 Get Media
+### 13.2 Get Media
 
 ```
 GET /media/{id}
@@ -847,9 +1075,9 @@ GET /media/{id}
 
 ---
 
-## 12. Broadcast API
+## 14. Broadcast API
 
-### 12.1 Create Broadcast
+### 14.1 Create Broadcast
 
 ```
 POST /broadcasts
@@ -868,7 +1096,7 @@ POST /broadcasts
 }
 ```
 
-### 12.2 Get Broadcast Status
+### 14.2 Get Broadcast Status
 
 ```
 GET /broadcasts/{id}
@@ -876,21 +1104,21 @@ GET /broadcasts/{id}
 
 ---
 
-## 13. Location API
+## 15. Location API
 
-### 13.1 Reverse Geocode
+### 15.1 Reverse Geocode
 
 ```
 GET /location/reverse?latitude=14.5995&longitude=120.9842
 ```
 
-### 13.2 Geocode Address
+### 15.2 Geocode Address
 
 ```
 GET /location/geocode?address=Taft+Avenue+Manila
 ```
 
-### 13.3 Get Directions
+### 15.3 Get Directions
 
 ```
 GET /location/directions?origin_lat=14.5&origin_lng=120.9&dest_lat=14.6&dest_lng=121.0
@@ -898,9 +1126,9 @@ GET /location/directions?origin_lat=14.5&origin_lng=120.9&dest_lat=14.6&dest_lng
 
 ---
 
-## 14. Supabase PostGIS API
+## 16. Supabase PostGIS API
 
-### 14.1 Find Nearby Incidents (PostGIS RPC)
+### 16.1 Find Nearby Incidents (PostGIS RPC)
 
 ```
 POST /rpc/find_nearby_incidents
@@ -930,7 +1158,7 @@ POST /rpc/find_nearby_incidents
 }
 ```
 
-### 14.2 Find Nearby Responders (PostGIS RPC)
+### 16.2 Find Nearby Responders (PostGIS RPC)
 
 ```
 POST /rpc/find_nearby_responders
@@ -947,7 +1175,7 @@ POST /rpc/find_nearby_responders
 }
 ```
 
-### 14.3 Find Nearby First Aiders (PostGIS RPC)
+### 16.3 Find Nearby First Aiders (PostGIS RPC)
 
 ```
 POST /rpc/find_nearby_first_aiders
@@ -963,7 +1191,7 @@ POST /rpc/find_nearby_first_aiders
 }
 ```
 
-### 14.4 Get Incidents in Polygon (PostGIS)
+### 16.4 Get Incidents in Polygon (PostGIS)
 
 ```
 POST /rpc/find_incidents_in_area
@@ -978,7 +1206,7 @@ POST /rpc/find_incidents_in_area
 }
 ```
 
-### 14.5 Get Heat Map Data (PostGIS)
+### 16.5 Get Heat Map Data (PostGIS)
 
 ```
 POST /rpc/get_incidents_heatmap
@@ -996,9 +1224,9 @@ POST /rpc/get_incidents_heatmap
 
 ---
 
-## 15. SMS/USSD API
+## 17. SMS/USSD API
 
-### 15.1 Receive Incoming SMS (Webhook)
+### 17.1 Receive Incoming SMS (Webhook)
 
 ```
 POST /sms/webhook
@@ -1027,7 +1255,7 @@ POST /sms/webhook
 }
 ```
 
-### 15.2 Send SMS to User
+### 17.2 Send SMS to User
 
 ```
 POST /sms/send
@@ -1046,13 +1274,13 @@ POST /sms/send
 }
 ```
 
-### 15.3 Get SMS Delivery Status
+### 17.3 Get SMS Delivery Status
 
 ```
 GET /sms/{message_id}/status
 ```
 
-### 15.4 USSD Session Start (Webhook)
+### 17.4 USSD Session Start (Webhook)
 
 ```
 POST /ussd/session
@@ -1067,7 +1295,7 @@ POST /ussd/session
 }
 ```
 
-### 15.5 USSD Input (Webhook)
+### 17.5 USSD Input (Webhook)
 
 ```
 POST /ussd/input
@@ -1082,7 +1310,7 @@ POST /ussd/input
 }
 ```
 
-### 15.6 SMS Command Parser
+### 17.6 SMS Command Parser
 
 ```
 POST /sms/parse
@@ -1107,9 +1335,9 @@ POST /sms/parse
 
 ---
 
-## 16. Silent SOS API
+## 18. Silent SOS API
 
-### 16.1 Activate Silent SOS
+### 18.1 Activate Silent SOS
 
 ```
 POST /silent-sos/activate
@@ -1138,7 +1366,7 @@ POST /silent-sos/activate
 }
 ```
 
-### 16.2 Update Silent SOS Location
+### 18.2 Update Silent SOS Location
 
 ```
 PUT /silent-sos/{incident_id}/location
@@ -1155,7 +1383,7 @@ PUT /silent-sos/{incident_id}/location
 }
 ```
 
-### 16.3 Confirm Safety (Post-Incident)
+### 18.3 Confirm Safety (Post-Incident)
 
 ```
 POST /silent-sos/{incident_id}/confirm
@@ -1169,7 +1397,7 @@ POST /silent-sos/{incident_id}/confirm
 }
 ```
 
-### 16.4 Cancel Silent SOS (False Alarm)
+### 18.4 Cancel Silent SOS (False Alarm)
 
 ```
 POST /silent-sos/{incident_id}/cancel
@@ -1182,7 +1410,7 @@ POST /silent-sos/{incident_id}/cancel
 }
 ```
 
-### 16.5 Get Silent SOS Status
+### 18.5 Get Silent SOS Status
 
 ```
 GET /silent-sos/{incident_id}/status
@@ -1205,9 +1433,9 @@ GET /silent-sos/{incident_id}/status
 
 ---
 
-## 17. Storage API (Cloudflare R2)
+## 19. Storage API (Cloudflare R2)
 
-### 17.1 Get Upload URL
+### 19.1 Get Upload URL
 
 ```
 POST /storage/upload-url
@@ -1231,7 +1459,7 @@ POST /storage/upload-url
 }
 ```
 
-### 17.2 Confirm Upload
+### 19.2 Confirm Upload
 
 ```
 POST /storage/{file_id}/confirm
@@ -1245,13 +1473,13 @@ POST /storage/{file_id}/confirm
 }
 ```
 
-### 17.3 Get File
+### 19.3 Get File
 
 ```
 GET /storage/{file_id}
 ```
 
-### 17.4 Delete File
+### 19.4 Delete File
 
 ```
 DELETE /storage/{file_id}
@@ -1259,9 +1487,9 @@ DELETE /storage/{file_id}
 
 ---
 
-## 18. Report/Analytics API
+## 20. Report/Analytics API
 
-### 14.1 Get Dashboard Stats
+### 20.1 Get Dashboard Stats
 
 ```
 GET /reports/dashboard?date_from=2026-01-01&date_to=2026-03-13
@@ -1283,13 +1511,13 @@ GET /reports/dashboard?date_from=2026-01-01&date_to=2026-03-13
 }
 ```
 
-### 14.2 Get Response Time Report
+### 20.2 Get Response Time Report
 
 ```
 GET /reports/response-time?group_by=day&date_from=2026-01-01&date_to=2026-03-13
 ```
 
-### 14.3 Get Heat Map Data
+### 20.3 Get Heat Map Data
 
 ```
 GET /reports/heatmap?date_from=2026-01-01&date_to=2026-03-13&type=MEDICAL
@@ -1297,9 +1525,9 @@ GET /reports/heatmap?date_from=2026-01-01&date_to=2026-03-13&type=MEDICAL
 
 ---
 
-## 19. WebSocket Events (Socket.io)
+## 21. WebSocket Events (Socket.io)
 
-### 19.1 Connect
+### 21.1 Connect
 
 ```
 Socket.io Client: io('https://api.emergency.ph')
@@ -1314,7 +1542,7 @@ io.connect('https://api.emergency.ph', {
 })
 ```
 
-### 19.2 Connection Events
+### 21.2 Connection Events
 
 | Event | Direction | Description |
 |-------|-----------|-------------|
@@ -1322,7 +1550,7 @@ io.connect('https://api.emergency.ph', {
 | `disconnect` | Server→Client | Disconnected from server |
 | `connect_error` | Server→Client | Connection error |
 
-### 19.3 Client Events (Send to Server)
+### 21.3 Client Events (Send to Server)
 
 ```javascript
 // Subscribe to incident
@@ -1349,7 +1577,7 @@ socket.emit('chat:message', {
 });
 ```
 
-### 19.4 Server Events (Receive from Server)
+### 21.4 Server Events (Receive from Server)
 
 ```javascript
 // New incident alert
@@ -1383,7 +1611,7 @@ socket.on('broadcast:alert', (data) => {
 });
 ```
 
-### 19.5 Rooms & Channels
+### 21.5 Rooms & Channels
 
 | Room | Description | Access |
 |------|-------------|--------|
@@ -1395,9 +1623,9 @@ socket.on('broadcast:alert', (data) => {
 
 ---
 
-## 20. Error Responses
+## 22. Error Responses
 
-### 16.1 Standard Error Format
+### 22.1 Standard Error Format
 
 ```json
 {
@@ -1411,7 +1639,7 @@ socket.on('broadcast:alert', (data) => {
 }
 ```
 
-### 16.2 Error Codes
+### 22.2 Error Codes
 
 | Code | HTTP Status | Description |
 |------|-------------|-------------|
@@ -1425,7 +1653,7 @@ socket.on('broadcast:alert', (data) => {
 
 ---
 
-## 21. Rate Limits
+## 23. Rate Limits
 
 | Endpoint | Limit |
 |----------|-------|
@@ -1436,7 +1664,7 @@ socket.on('broadcast:alert', (data) => {
 
 ---
 
-## 22. Related Documents
+## 24. Related Documents
 
 - [technical-architecture.md](technical-architecture.md)
 - [unified-data-dictionary.md](unified-data-dictionary.md)

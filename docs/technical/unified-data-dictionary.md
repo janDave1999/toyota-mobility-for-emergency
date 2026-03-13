@@ -39,7 +39,7 @@ interface User {
   password_hash: string;         // bcrypt hash
   first_name: string;
   last_name: string;
-  role: UserRole;               // CITIZEN, RESPONDER, FIRST_AIDER, DISPATCHER, ADMIN
+  role: UserRole;               // CITIZEN, DISPATCHER, ADMIN
   profile_image_url: string;
   created_at: timestamp;
   updated_at: timestamp;
@@ -51,10 +51,12 @@ interface User {
   // Citizen-specific
   emergency_contacts: EmergencyContact[];
   
-  // First Aider-specific
-  profession: string;           // NURSE, DOCTOR, LIFEGUARD, FIRE_TRAINED
-  license_number: string;        // PRC number
-  license_verified: boolean;
+  // First Aider-specific (embedded)
+  is_first_aider: boolean;
+  first_aider_profession: FirstAiderProfession;
+  first_aider_license: string;
+  first_aider_license_verified: boolean;
+  first_aider_max_distance_km: number;
   
   // Settings
   notification_preferences: NotificationPreferences;
@@ -64,8 +66,6 @@ interface User {
 
 enum UserRole {
   CITIZEN = "CITIZEN",
-  RESPONDER = "RESPONDER",
-  FIRST_AIDER = "FIRST_AIDER",
   DISPATCHER = "DISPATCHER",
   ADMIN = "ADMIN"
 }
@@ -103,6 +103,7 @@ interface Agency {
   id: string;
   name: string;                 // Philippine National Police
   short_name: string;           // PNP
+  code: string;                 // Unique agency code (PNP, BFP, etc.)
   type: AgencyType;             // POLICE, AMBULANCE, FIRE, LGU, OCD
   region: string;
   province: string;
@@ -111,10 +112,13 @@ interface Agency {
   address: string;
   phone: string;
   email: string;
+  website: string;
   latitude: number;
   longitude: number;
   is_active: boolean;
+  parent_agency_id: string;      // For regional branches
   created_at: timestamp;
+  updated_at: timestamp;
 }
 
 enum AgencyType {
@@ -125,6 +129,60 @@ enum AgencyType {
   OCD = "OCD",
   COAST_GUARD = "COAST_GUARD",
   BARANGAY = "BARANGAY"
+}
+```
+
+---
+
+### 2.2.1 Agency Admin Entity
+
+```typescript
+interface AgencyAdmin {
+  id: string;
+  user_id: string;              // FK to User
+  agency_id: string;            // FK to Agency
+  role: AgencyAdminRole;        // ADMIN, SUPER_ADMIN
+  permissions: string[];         // ['manage_responders', 'view_stats', 'dispatch']
+  is_active: boolean;
+  approved_by: string;          // FK to User (supervisor)
+  approved_at: timestamp;
+  created_at: timestamp;
+  updated_at: timestamp;
+}
+
+enum AgencyAdminRole {
+  ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN"
+}
+```
+
+---
+
+### 2.2.2 Agency Statistics Entity
+
+```typescript
+interface AgencyStatistics {
+  id: string;
+  agency_id: string;            // FK to Agency
+  date: date;
+  
+  // Incident stats
+  incidents_received: number;
+  incidents_resolved: number;
+  incidents_cancelled: number;
+  false_reports: number;
+  
+  // Response stats
+  total_response_time_minutes: number;
+  average_response_time_minutes: number;
+  fastest_response_time_minutes: number;
+  
+  // Responder stats
+  responders_available: number;
+  responders_deployed: number;
+  
+  // Calculated at end of day
+  calculated_at: timestamp;
 }
 ```
 
@@ -679,20 +737,28 @@ enum BroadcastStatus {
 | users | idx_users_phone | phone | B-Tree |
 | users | idx_users_email | email | B-Tree |
 | users | idx_users_role | role | B-Tree |
+| agencies | idx_agencies_type | type | B-Tree |
+| agencies | idx_agencies_region | region | B-Tree |
+| agencies | idx_agencies_active | is_active | B-Tree |
+| agency_admins | idx_agency_admins_user | user_id | B-Tree |
+| agency_admins | idx_agency_admins_agency | agency_id | B-Tree |
 | responders | idx_responders_agency | agency_id | B-Tree |
 | responders | idx_responders_status | status | B-Tree |
 | responders | idx_responders_location | (lat, lng) | GIST |
+| responders | idx_responders_badge | badge_number | B-Tree |
 | incidents | idx_incidents_status | status | B-Tree |
 | incidents | idx_incidents_type | type | B-Tree |
 | incidents | idx_incidents_location | (lat, lng) | GIST |
 | incidents | idx_incidents_created | created_at | B-Tree |
 | incidents | idx_incidents_reporter | reporter_id | B-Tree |
+| incidents | idx_incidents_primary_agency | primary_agency_id | B-Tree |
 | first_aiders | idx_first_aiders_profession | profession | B-Tree |
 | first_aiders | idx_first_aiders_location | (lat, lng) | GIST |
 | notifications | idx_notifications_user | user_id | B-Tree |
 | notifications | idx_notifications_incident | incident_id | B-Tree |
 | messages | idx_messages_incident | incident_id | B-Tree |
 | location_updates | idx_location_entity | (entity_type, entity_id, timestamp) | Composite |
+| agency_statistics | idx_agency_stats_agency_date | (agency_id, date) | Composite |
 
 ---
 
