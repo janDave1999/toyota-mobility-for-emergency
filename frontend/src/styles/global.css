@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@source "../**/*.astro";
+@source "../**/*.{ts,js}";
+
+@theme {
+  --color-toyota-red: #EB0A1E;
+  --color-toyota-red-dark: #C40819;
+  --color-black: #000000;
+  --color-white: #FFFFFF;
+  --color-gray-soft: #58595B;
+  
+  --color-critical: #DC2626;
+  --color-warning: #F59E0B;
+  --color-success: #10B981;
+  --color-info: #3B82F6;
+  
+  --color-police: #1E40AF;
+  --color-fire: #B91C1C;
+  --color-medical: #059669;
+  --color-disaster: #EA580C;
+  
+  --font-sans: 'Inter', system-ui, sans-serif;
+}

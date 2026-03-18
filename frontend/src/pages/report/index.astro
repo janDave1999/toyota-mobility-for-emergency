@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AppHeader from '../../components/app/AppHeader.astro';
+
+const TYPES = [
+  {
+    id: 'police',
+    label: 'POLICE',
+    desc: 'Crime, Theft, Danger',
+    emoji: '👮',
+    color: 'text-blue-700',
+    bg: 'bg-blue-50',
+    border: 'border-blue-100',
+  },
+  {
+    id: 'ambulance',
+    label: 'AMBULANCE',
+    desc: 'Medical, Injury, Accident',
+    emoji: '🚑',
+    color: 'text-green-700',
+    bg: 'bg-green-50',
+    border: 'border-green-100',
+  },
+  {
+    id: 'fire',
+    label: 'FIRE',
+    desc: 'Fire, Gas Leak, Explosion',
+    emoji: '🔥',
+    color: 'text-red-600',
+    bg: 'bg-red-50',
+    border: 'border-red-100',
+  },
+  {
+    id: 'other',
+    label: 'OTHER',
+    desc: 'Other emergency',
+    emoji: '⚠️',
+    color: 'text-orange-500',
+    bg: 'bg-orange-50',
+    border: 'border-orange-100',
+  },
+];
+---
+
+<BaseLayout title="Select Type">
+  <div class="min-h-screen bg-gray-100 flex flex-col">
+
+    <AppHeader title="Select Type" back={{ href: '/sos', label: 'Home' }} />
+
+    <main class="flex-1 px-4 py-6 max-w-lg mx-auto w-full">
+      <h2 class="text-xl font-bold text-gray-900 mb-5">What's the emergency?</h2>
+
+      <div class="space-y-3">
+        {TYPES.map(type => (
+          <a
+            href={`/report/${type.id}`}
+            class="flex items-center gap-4 bg-white rounded-2xl px-5 py-4 shadow-sm border border-gray-100 hover:border-gray-200 hover:shadow-md active:scale-[0.99] transition-all"
+          >
+            <!-- Icon -->
+            <div class={`w-12 h-12 rounded-full ${type.bg} flex items-center justify-center shrink-0`}>
+              <span class="text-2xl" role="img">{type.emoji}</span>
+            </div>
+
+            <!-- Text -->
+            <div class="flex-1 min-w-0">
+              <p class={`text-sm font-extrabold tracking-wide ${type.color}`}>{type.label}</p>
+              <p class="text-xs text-gray-500 mt-0.5">{type.desc}</p>
+            </div>
+
+            <!-- Arrow -->
+            <svg class="w-4 h-4 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+        ))}
+      </div>
+    </main>
+
+  </div>
+</BaseLayout>

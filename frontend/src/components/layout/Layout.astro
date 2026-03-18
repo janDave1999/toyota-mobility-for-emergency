@@ -1,0 +1,77 @@
+---
+import Navbar from '../common/Navbar.astro';
+import Footer from '../common/Footer.astro';
+import SEO from '../common/SEO.astro';
+import Toast from '../common/Toast.astro';
+import '../../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string;
+  url?: string;
+  type?: 'website' | 'article';
+  publishedTime?: string;
+  author?: string;
+  navbarVariant?: 'default' | 'transparent' | 'emergency';
+  hideFooter?: boolean;
+}
+
+const { 
+  title, 
+  description, 
+  image, 
+  url, 
+  type, 
+  publishedTime, 
+  author,
+  navbarVariant = 'default',
+  hideFooter = false
+} = Astro.props;
+
+const fullTitle = title === 'Toyota Mobility for Emergency' 
+  ? title 
+  : `${title} | Toyota Mobility for Emergency`;
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <SEO 
+      title={fullTitle}
+      description={description}
+      image={image}
+      url={url}
+      type={type}
+      publishedTime={publishedTime}
+      author={author}
+    />
+  </head>
+  <body class="font-sans antialiased text-gray-900 bg-white min-h-screen flex flex-col">
+    <Navbar variant={navbarVariant} />
+    
+    <main class="flex-1 pt-16 lg:pt-[72px]">
+      <slot />
+    </main>
+    
+    {!hideFooter && <Footer />}
+    
+    <Toast />
+  </body>
+</html>
+
+<style is:global>
+  * {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+</style>

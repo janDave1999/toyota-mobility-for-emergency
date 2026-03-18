@@ -1,0 +1,76 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AppHeader from '../../components/app/AppHeader.astro';
+import BottomNav from '../../components/app/BottomNav.astro';
+
+const { user: sessionUser } = Astro.locals;
+const firstName = sessionUser?.first_name || sessionUser?.email?.split('@')[0] || 'User';
+---
+
+<BaseLayout title="Home">
+  <div class="min-h-screen bg-gray-50 flex flex-col md:pl-56">
+
+    <AppHeader title="Red Alert">
+      <a
+        href="/profile"
+        class="w-8 h-8 rounded-full bg-toyota-red flex items-center justify-center text-white text-sm font-bold uppercase hover:bg-red-700 transition-colors"
+        title="Profile"
+      >
+        {firstName[0]}
+      </a>
+    </AppHeader>
+
+    <main class="flex-1 flex flex-col items-center justify-center px-6 py-10 pb-24 gap-8 max-w-sm mx-auto w-full">
+
+      <!-- System status -->
+      <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-gray-200 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        <span class="text-sm text-gray-600 font-medium">All systems operational</span>
+      </div>
+
+      <!-- Emergency button -->
+      <div class="flex flex-col items-center gap-5">
+        <div class="relative flex items-center justify-center">
+          <span class="absolute inline-flex h-56 w-56 rounded-full bg-toyota-red opacity-10 animate-ping" style="animation-duration: 2s;"></span>
+          <span class="absolute inline-flex h-48 w-48 rounded-full bg-toyota-red opacity-15 animate-ping" style="animation-duration: 2s; animation-delay: 0.3s;"></span>
+
+          <button
+            id="btn-sos"
+            class="relative w-44 h-44 rounded-full bg-toyota-red hover:bg-red-700 active:scale-95 transition-all shadow-2xl shadow-red-300 flex flex-col items-center justify-center gap-1 select-none"
+          >
+            <span class="text-4xl" role="img" aria-label="siren">🚨</span>
+            <span class="text-white font-extrabold text-lg leading-tight text-center">TAP TO<br/>REPORT<br/>EMERGENCY</span>
+          </button>
+        </div>
+
+        <p class="text-sm text-gray-400 text-center">Press the button to start an emergency report</p>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="w-full">
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Recent Activity</h2>
+            <a href="/incidents" class="text-xs text-toyota-red font-medium hover:underline">See all</a>
+          </div>
+          <div class="flex flex-col items-center justify-center py-10 px-5 text-center">
+            <svg class="w-10 h-10 text-gray-200 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+            </svg>
+            <p class="text-sm text-gray-400 font-medium">No active emergencies</p>
+            <p class="text-xs text-gray-300 mt-1">Your reported incidents will appear here</p>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <BottomNav active="home" />
+  </div>
+</BaseLayout>
+
+<script>
+document.getElementById('btn-sos')!.addEventListener('click', () => {
+  window.location.href = '/report';
+});
+</script>

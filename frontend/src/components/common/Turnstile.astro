@@ -1,0 +1,54 @@
+---
+interface Props {
+  /** Unique ID so multiple widgets on one page don't conflict */
+  id?: string;
+  theme?: 'light' | 'dark' | 'auto';
+  size?: 'normal' | 'compact' | 'flexible';
+  /** Descriptive label for the action, e.g. "login", "register" */
+  action?: string;
+}
+
+const {
+  id = 'turnstile-widget',
+  theme = 'auto',
+  size = 'flexible',
+  action,
+} = Astro.props;
+
+const siteKey = import.meta.env.CF_TURNSTILE_SITE_KEY;
+---
+
+<div
+  id={id}
+  class="cf-turnstile"
+  data-sitekey={siteKey}
+  data-theme={theme}
+  data-size={size}
+  data-action={action}
+  data-callback="onTurnstileSuccess"
+  data-error-callback="onTurnstileError"
+  data-expired-callback="onTurnstileExpired"
+></div>
+
+<!-- Cloudflare Turnstile script — loaded once per page even if component renders multiple times -->
+<script is:inline>
+  if (!window.__turnstileLoaded) {
+    window.__turnstileLoaded = true;
+    const s = document.createElement('script');
+    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    s.async = true;
+    s.defer = true;
+    document.head.appendChild(s);
+  }
+
+  // Global callbacks — pages can override these
+  window.onTurnstileSuccess = window.onTurnstileSuccess || function(token) {
+    document.dispatchEvent(new CustomEvent('turnstile:success', { detail: { token } }));
+  };
+  window.onTurnstileError = window.onTurnstileError || function() {
+    document.dispatchEvent(new CustomEvent('turnstile:error'));
+  };
+  window.onTurnstileExpired = window.onTurnstileExpired || function() {
+    document.dispatchEvent(new CustomEvent('turnstile:expired'));
+  };
+</script>

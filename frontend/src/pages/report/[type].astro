@@ -1,0 +1,215 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import AppHeader from '../../components/app/AppHeader.astro';
+
+const TYPE_CONFIG: Record<string, { label: string; emoji: string; color: string; bg: string; apiType: string }> = {
+  police:    { label: 'POLICE',    emoji: '👮', color: 'text-blue-700',   bg: 'bg-blue-50',   apiType: 'POLICE'  },
+  ambulance: { label: 'AMBULANCE', emoji: '🚑', color: 'text-green-700',  bg: 'bg-green-50',  apiType: 'MEDICAL' },
+  fire:      { label: 'FIRE',      emoji: '🔥', color: 'text-red-600',    bg: 'bg-red-50',    apiType: 'FIRE'    },
+  other:     { label: 'OTHER',     emoji: '⚠️', color: 'text-orange-500', bg: 'bg-orange-50', apiType: 'OTHER'   },
+};
+
+const rawType = Astro.params.type ?? '';
+const config = TYPE_CONFIG[rawType];
+
+if (!config) {
+  return Astro.redirect('/report');
+}
+---
+
+<BaseLayout title="Report Emergency">
+  <div class="min-h-screen bg-gray-100 flex flex-col">
+
+    <AppHeader title="Report Emergency" back={{ href: '/report', label: 'Select Type' }}>
+      <!-- Ready indicator -->
+      <div id="ready-indicator" class="w-7 h-7 rounded-full border-2 border-gray-200 flex items-center justify-center transition-colors">
+        <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+    </AppHeader>
+
+    <main class="flex-1 px-4 py-5 max-w-lg mx-auto w-full space-y-4 pb-28">
+
+      <!-- Type badge -->
+      <div class={`flex items-center gap-3 px-4 py-3 rounded-xl ${config.bg}`}>
+        <span class="text-2xl">{config.emoji}</span>
+        <span class={`text-base font-extrabold tracking-wide ${config.color}`}>{config.label}</span>
+      </div>
+
+      <!-- Location -->
+      <div>
+        <p class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Location
+        </p>
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <svg class="w-4 h-4 text-toyota-red shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <div class="min-w-0">
+              <p id="location-address" class="text-sm font-semibold text-gray-900 truncate">Detecting location…</p>
+              <p id="location-coords" class="text-xs text-gray-400 mt-0.5">—</p>
+            </div>
+          </div>
+          <button
+            id="btn-change-location"
+            class="shrink-0 text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors px-2 py-1 rounded-lg hover:bg-blue-50"
+          >
+            Change
+          </button>
+        </div>
+      </div>
+
+      <!-- Photo / Video -->
+      <div>
+        <p class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Photo/Video
+          <span class="text-xs font-normal text-gray-400">(Optional)</span>
+        </p>
+
+        <label
+          id="photo-drop"
+          class="flex flex-col items-center justify-center gap-2 bg-white border-2 border-dashed border-gray-200 rounded-xl h-28 cursor-pointer hover:border-gray-300 hover:bg-gray-50 transition-colors"
+        >
+          <input type="file" id="photo-input" accept="image/*,video/*" multiple class="hidden" />
+          <div class="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+          </div>
+          <span id="photo-label" class="text-sm text-gray-400">Add Photo</span>
+        </label>
+
+        <!-- Preview row -->
+        <div id="photo-preview" class="hidden mt-2 flex gap-2 flex-wrap"></div>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <p class="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+          <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+          </svg>
+          Description
+          <span class="text-xs font-normal text-gray-400">(Optional)</span>
+        </p>
+        <textarea
+          id="field-description"
+          rows="4"
+          placeholder="Describe what happened…"
+          class="w-full bg-white border border-gray-100 shadow-sm rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-toyota-red focus:border-transparent resize-none transition"
+        ></textarea>
+      </div>
+
+    </main>
+
+    <!-- Submit button — fixed at bottom -->
+    <div class="fixed bottom-0 left-0 right-0 px-4 pb-6 pt-3 bg-gradient-to-t from-gray-100 via-gray-100">
+      <button
+        id="btn-submit"
+        class="w-full max-w-lg mx-auto flex items-center justify-center py-4 bg-toyota-red hover:bg-red-700 active:scale-[0.99] text-white font-bold text-sm tracking-widest uppercase rounded-2xl shadow-lg shadow-red-200 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        Submit Now
+      </button>
+    </div>
+
+  </div>
+</BaseLayout>
+
+<script>
+// ── Location detection ────────────────────────────────────────────────────────
+const addrEl   = document.getElementById('location-address')!;
+const coordsEl = document.getElementById('location-coords')!;
+const readyEl  = document.getElementById('ready-indicator')!;
+
+let latitude: number | null = null;
+let longitude: number | null = null;
+
+function setReady(on: boolean) {
+  if (on) {
+    readyEl.classList.replace('border-gray-200', 'border-green-500');
+    readyEl.querySelector('svg')!.classList.replace('text-gray-300', 'text-green-500');
+  } else {
+    readyEl.classList.replace('border-green-500', 'border-gray-200');
+    readyEl.querySelector('svg')!.classList.replace('text-green-500', 'text-gray-300');
+  }
+}
+
+function detectLocation() {
+  addrEl.textContent = 'Detecting location…';
+  coordsEl.textContent = '—';
+  setReady(false);
+
+  if (!navigator.geolocation) {
+    addrEl.textContent = 'Location unavailable';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      latitude  = pos.coords.latitude;
+      longitude = pos.coords.longitude;
+      coordsEl.textContent = `${latitude.toFixed(4)}° N, ${longitude.toFixed(4)}° E`;
+
+      // Reverse geocode via browser (no API key needed for display)
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+        );
+        const data = await res.json();
+        const addr = data.address;
+        const parts = [
+          addr.road ?? addr.neighbourhood,
+          addr.city ?? addr.town ?? addr.municipality ?? addr.county,
+          addr.state,
+        ].filter(Boolean);
+        addrEl.textContent = parts.join(', ') || 'Current Location';
+      } catch {
+        addrEl.textContent = 'Current Location';
+      }
+
+      setReady(true);
+    },
+    () => {
+      addrEl.textContent = 'Location access denied';
+      coordsEl.textContent = 'Tap "Change" to enter manually';
+    },
+    { timeout: 10000 }
+  );
+}
+
+detectLocation();
+document.getElementById('btn-change-location')!.addEventListener('click', detectLocation);
+
+// ── Photo preview ─────────────────────────────────────────────────────────────
+const photoInput   = document.getElementById('photo-input') as HTMLInputElement;
+const photoPreview = document.getElementById('photo-preview')!;
+const photoLabel   = document.getElementById('photo-label')!;
+
+photoInput.addEventListener('change', () => {
+  const files = Array.from(photoInput.files ?? []);
+  if (!files.length) return;
+
+  photoLabel.textContent = `${files.length} file${files.length > 1 ? 's' : ''} selected`;
+  photoPreview.innerHTML = '';
+  photoPreview.classList.remove('hidden');
+  photoPreview.classList.add('flex');
+
+  files.forEach(file => {
+    const url = URL.createObjectURL(file);
+    const img = document.createElement('img');
+    img.src = url;
+    img.className = 'w-16 h-16 rounded-lg object-cover border border-gray-200';
+    photoPreview.appendChild(img);
+  });
+});
+</script>

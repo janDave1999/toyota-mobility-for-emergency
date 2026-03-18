@@ -1,0 +1,73 @@
+---
+type Status = 'critical' | 'warning' | 'success' | 'info' | 'pending' | 'neutral';
+
+interface Props {
+  status?: Status;
+  variant?: 'solid' | 'outline';
+  size?: 'sm' | 'md';
+  pulse?: boolean;
+}
+
+const { 
+  status = 'neutral', 
+  variant = 'solid', 
+  size = 'md',
+  pulse = false
+} = Astro.props;
+
+const colors = {
+  critical: {
+    solid: 'bg-red-100 text-red-800',
+    outline: 'border-2 border-red-200 text-red-700 bg-red-50',
+    dot: 'bg-critical'
+  },
+  warning: {
+    solid: 'bg-amber-100 text-amber-800',
+    outline: 'border-2 border-amber-200 text-amber-700 bg-amber-50',
+    dot: 'bg-warning'
+  },
+  success: {
+    solid: 'bg-green-100 text-green-800',
+    outline: 'border-2 border-green-200 text-green-700 bg-green-50',
+    dot: 'bg-success'
+  },
+  info: {
+    solid: 'bg-blue-100 text-blue-800',
+    outline: 'border-2 border-blue-200 text-blue-700 bg-blue-50',
+    dot: 'bg-info'
+  },
+  pending: {
+    solid: 'bg-purple-100 text-purple-800',
+    outline: 'border-2 border-purple-200 text-purple-700 bg-purple-50',
+    dot: 'bg-purple-500'
+  },
+  neutral: {
+    solid: 'bg-gray-100 text-gray-800',
+    outline: 'border-2 border-gray-200 text-gray-700 bg-gray-50',
+    dot: 'bg-gray-500'
+  }
+};
+
+const sizes = {
+  sm: 'px-2 py-0.5 text-xs',
+  md: 'px-3 py-1 text-sm'
+};
+
+const dotSizes = {
+  sm: 'w-1.5 h-1.5',
+  md: 'w-2 h-2'
+};
+
+const classes = [
+  'inline-flex items-center gap-1.5 font-medium rounded-full',
+  colors[status][variant],
+  sizes[size]
+].filter(Boolean).join(' ');
+---
+
+<span class={classes}>
+  {pulse && (
+    <span class:list={['rounded-full animate-pulse', dotSizes[size], colors[status].dot]}></span>
+  )}
+  <slot />
+</span>
