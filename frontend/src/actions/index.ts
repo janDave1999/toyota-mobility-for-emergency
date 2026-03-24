@@ -9,6 +9,7 @@ function getUserIdFromToken(accessToken: string): string {
   return payload.sub;
 }
 
+const API_VERSION = import.meta.env.API_VERSION ?? 'v1';
 export const server = {
   auth: {
     register: defineAction({
@@ -34,7 +35,7 @@ export const server = {
         let res: Response;
         try {
           const apiBase = import.meta.env.API_BASE_URL;
-          res = await fetch(`${apiBase}api/users`, {
+          res = await fetch(`${apiBase}/${API_VERSION}/users`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ first_name, last_name, phone, email, password }),
@@ -81,7 +82,7 @@ export const server = {
         let res: Response;
         try {
           const apiBase = import.meta.env.API_BASE_URL;
-          res = await fetch(`${apiBase}api/auth/login`, {
+          res = await fetch(`${apiBase}/${API_VERSION}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: email.trim(), password }),
@@ -157,7 +158,7 @@ export const server = {
         let res: Response;
         try {
           const apiBase = import.meta.env.API_BASE_URL;
-          res = await fetch(`${apiBase}api/users/${userId}/emergency-contacts`, {
+          res = await fetch(`${apiBase}/${API_VERSION}/users/${userId}/emergency-contacts`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify({ name, phone, relationship }),
@@ -188,7 +189,7 @@ export const server = {
         let res: Response;
         try {
           const apiBase = import.meta.env.API_BASE_URL;
-          res = await fetch(`${apiBase}api/users/${userId}/emergency-contacts/${id}`, {
+          res = await fetch(`${apiBase}/${API_VERSION}/users/${userId}/emergency-contacts/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify({ name, phone, relationship }),
@@ -216,7 +217,7 @@ export const server = {
         let res: Response;
         try {
           const apiBase = import.meta.env.API_BASE_URL;
-          res = await fetch(`${apiBase}api/users/${userId}/emergency-contacts/${id}`, {
+          res = await fetch(`${apiBase}/${API_VERSION}/users/${userId}/emergency-contacts/${id}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${accessToken}` },
           });

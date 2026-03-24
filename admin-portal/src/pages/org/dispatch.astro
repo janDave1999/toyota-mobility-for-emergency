@@ -1,0 +1,169 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dispatch" role="DISPATCHER">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Dispatch Center</h1>
+    <p class="text-gray-500 mt-1">Assign responders to incidents</p>
+  </div>
+  
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Pending Incidents</h2>
+      <div id="pending-incidents" class="space-y-3 max-h-[500px] overflow-y-auto">
+        <p class="text-gray-500 text-sm">Loading...</p>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">Available Responders</h2>
+      <div id="available-responders" class="space-y-3 max-h-[500px] overflow-y-auto">
+        <p class="text-gray-500 text-sm">Loading...</p>
+      </div>
+    </div>
+  </div>
+  
+  <div id="dispatch-panel" class="hidden mt-6 bg-white rounded-xl shadow-sm p-6">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Dispatch Action</h2>
+    <div class="flex items-center gap-4 mb-4">
+      <div class="flex-1 p-4 bg-gray-50 rounded-lg">
+        <p class="text-sm text-gray-500">Incident</p>
+        <p id="selected-incident" class="font-medium">-</p>
+      </div>
+      <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+      </svg>
+      <div class="flex-1 p-4 bg-gray-50 rounded-lg">
+        <p class="text-sm text-gray-500">Responder</p>
+        <p id="selected-responder" class="font-medium">-</p>
+      </div>
+    </div>
+    <div class="flex gap-4">
+      <button
+        id="dispatch-btn"
+        class="flex-1 bg-red-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-red-700 transition"
+      >
+        Dispatch Now
+      </button>
+      <button
+        id="cancel-btn"
+        class="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+  
+  let selectedIncident: any = null;
+  let selectedResponder: any = null;
+  
+  async function loadPendingIncidents() {
+    const result = await actions.org.getIncidents({ status: 'REPORTED' });
+    
+    const container = document.getElementById('pending-incidents');
+    if (container) {
+      if (result.data?.length > 0) {
+        container.innerHTML = result.data.map((incident: any) => `
+          <div class="p-4 border border-gray-200 rounded-lg hover:border-red-300 cursor-pointer transition" onclick="selectIncident(${JSON.stringify(incident).replace(/"/g, '&quot;')})">
+            <div class="flex items-center justify-between mb-2">
+              <span class="px-2 py-1 text-xs font-medium rounded-full ${
+                incident.type === 'POLICE' ? 'bg-blue-100 text-blue-700' :
+                incident.type === 'AMBULANCE' ? 'bg-green-100 text-green-700' :
+                'bg-orange-100 text-orange-700'
+              }">${incident.type}</span>
+              <span class="text-xs text-gray-500">${new Date(incident.created_at).toLocaleTimeString()}</span>
+            </div>
+            <p class="text-sm text-gray-700">${incident.description?.slice(0, 100) || 'No description'}</p>
+            <p class="text-xs text-gray-500 mt-1">${incident.location?.address || 'Location unknown'}</p>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<p class="text-gray-500 text-sm">No pending incidents</p>';
+      }
+    }
+  }
+  
+  async function loadAvailableResponders() {
+    const result = await actions.org.getMembers({ status: 'AVAILABLE' });
+    
+    const container = document.getElementById('available-responders');
+    if (container) {
+      if (result.data?.length > 0) {
+        container.innerHTML = result.data.map((responder: any) => `
+          <div class="p-4 border border-gray-200 rounded-lg hover:border-green-300 cursor-pointer transition" onclick="selectResponder(${JSON.stringify(responder).replace(/"/g, '&quot;')})">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <span class="text-sm font-medium text-green-700">${responder.first_name?.charAt(0) || '?'}</span>
+              </div>
+              <div>
+                <p class="font-medium text-gray-900">${responder.first_name} ${responder.last_name}</p>
+                <p class="text-xs text-gray-500">${responder.phone || 'No phone'}</p>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      } else {
+        container.innerHTML = '<p class="text-gray-500 text-sm">No available responders</p>';
+      }
+    }
+  }
+  
+  const incident = document.getElementById('selected-incident') as HTMLElement;
+  const responder = document.getElementById('selected-responder') as HTMLElement;
+
+  (window as any).selectIncident = function(incident: any) {
+    selectedIncident = incident;
+    incident.textContent = `${incident.type} - ${incident.id.slice(0, 8)}`;
+    updateDispatchPanel();
+  };
+  
+  (window as any).selectResponder = function(responder: any) {
+    selectedResponder = responder;
+    responder.textContent = `${responder.first_name} ${responder.last_name}`;
+    updateDispatchPanel();
+  };
+  
+  function updateDispatchPanel() {
+    const panel = document.getElementById('dispatch-panel') as HTMLElement;
+    if (selectedIncident && selectedResponder) {
+      panel.classList.remove('hidden');
+    } else {
+      panel.classList.add('hidden');
+    }
+  }
+  const dispatchBtn = document.getElementById('dispatch-btn') as HTMLElement;
+  dispatchBtn.addEventListener('click', async () => {
+    if (!selectedIncident || !selectedResponder) return;
+    
+    const result: any = await actions.org.dispatch({
+      incident_id: selectedIncident.id,
+      responder_id: selectedResponder.id,
+    });
+    
+    if (result.success) {
+      alert('Dispatcher sent successfully!');
+      selectedIncident = null;
+      selectedResponder = null;
+      updateDispatchPanel();
+      loadPendingIncidents();
+      loadAvailableResponders();
+    } else {
+      alert(result.error?.message || 'Failed to dispatch');
+    }
+  });
+  
+  const cancelBtn = document.getElementById('cancel-btn') as HTMLElement;
+  cancelBtn.addEventListener('click', () => {
+    selectedIncident = null;
+    selectedResponder = null;
+    updateDispatchPanel();
+  });
+  
+  loadPendingIncidents();
+  loadAvailableResponders();
+</script>

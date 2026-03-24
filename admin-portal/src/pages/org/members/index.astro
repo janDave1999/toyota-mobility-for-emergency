@@ -1,0 +1,222 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+const orgId = Astro.cookies.get('active_org_id')?.value ?? '';
+---
+
+<AdminLayout title="Members" role="DISPATCHER">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Team Members</h1>
+      <p class="text-gray-500 mt-1">Manage responders in your organization</p>
+    </div>
+    <a
+      href="/org/members/invite"
+      class="bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-2"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+      </svg>
+      Invite Member
+    </a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+      <div class="flex items-center gap-4">
+        <div class="relative flex-1 max-w-md">
+          <input
+            type="text"
+            id="search"
+            placeholder="Search members..."
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          />
+          <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+
+        <select id="status-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          <option value="">All Status</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INVITED">Invited</option>
+          <option value="REVOKED">Revoked</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responder Type</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="members-table-body" class="divide-y divide-gray-200">
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+              Loading members...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="pagination" class="px-6 py-4 border-t border-gray-100 flex justify-end"></div>
+  </div>
+  <div id="members-meta" data-org-id={orgId} class="hidden"></div>
+</AdminLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { createPaginator } from '../../../lib/paginate';
+
+  const ROLE_COLORS: Record<string, string> = {
+    DISPATCHER: 'bg-blue-100 text-blue-700',
+    RESPONDER:  'bg-green-100 text-green-700',
+    ORG_ADMIN:  'bg-purple-100 text-purple-700',
+  };
+
+  const STATUS_COLORS: Record<string, string> = {
+    ACTIVE:  'bg-green-100 text-green-700',
+    INVITED: 'bg-yellow-100 text-yellow-700',
+    REVOKED: 'bg-gray-100 text-gray-500',
+  };
+
+  const LIMIT = 10;
+  let allMembers: any[] = [];
+  let orgId = '';
+
+  const paginator = createPaginator('pagination', (page) => loadMembers(page));
+
+  function renderTable(members: any[]) {
+    const tbody = document.getElementById('members-table-body')!;
+    if (!members.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No members found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = members.map((m) => {
+      const user     = m.user ?? m;
+      const fullName = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '—';
+      const initial  = user.first_name?.charAt(0) ?? '?';
+      const roleName = m.org_role ?? 'RESPONDER';
+      const respType = m.responder_type ?? '—';
+      const status   = m.status ?? 'ACTIVE';
+      return `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap">
+            <a href="/org/members/${m.user_id}?mid=${m.id}&status=${m.status}&org_id=${m.organization_id}&role=${roleName}" class="flex items-center gap-3 group">
+              <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center shrink-0">
+                <span class="text-sm font-medium text-gray-600">${initial}</span>
+              </div>
+              <div>
+                <div class="font-medium text-gray-900 group-hover:text-red-600 transition">${fullName}</div>
+                <div class="text-xs text-gray-400">${user.email ?? ''}</div>
+              </div>
+            </a>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${user.phone ?? '—'}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 py-1 text-xs font-medium rounded-full ${ROLE_COLORS[roleName] ?? 'bg-gray-100 text-gray-700'}">${roleName}</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${respType.replace(/_/g, ' ')}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-700'}">${status}</span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+            <div class="flex items-center justify-end gap-3">
+              ${roleName !== 'ORG_ADMIN' ? `
+                <button data-revoke="${m.id}" class="text-gray-400 hover:text-yellow-600 transition font-medium text-sm">
+                  Revoke
+                </button>
+                <button data-kick="${m.id}" class="text-gray-400 hover:text-red-600 transition font-medium text-sm">
+                  Kick
+                </button>
+              ` : '<span class="text-xs text-gray-300">—</span>'}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    tbody.querySelectorAll('[data-revoke]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const memberId = (btn as HTMLElement).dataset.revoke!;
+        if (!confirm('Revoke this member\'s access? They will no longer be part of the organization.')) return;
+        const { error } = await actions.org.revokeMember({ org_id: orgId, member_id: memberId });
+        if (error) { alert(error.message); return; }
+        loadMembers(paginator.page);
+      });
+    });
+
+    tbody.querySelectorAll('[data-kick]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const memberId = (btn as HTMLElement).dataset.kick!;
+        if (!confirm('Kick this member? They will be permanently removed from the organization.')) return;
+        const { error } = await actions.org.kickMember({ org_id: orgId, member_id: memberId });
+        if (error) { alert(error.message); return; }
+        loadMembers(paginator.page);
+      });
+    });
+  }
+
+  async function loadMembers(page = 1) {
+    const status = (document.getElementById('status-filter') as HTMLSelectElement).value;
+    const tbody  = document.getElementById('members-table-body')!;
+    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Loading…</td></tr>`;
+    console.log('Loading members for org:', orgId, 'with status filter:', status);
+    const { data, error } = await actions.org.getMembers({
+      org_id: orgId,
+      page,
+      limit: LIMIT,
+      ...(status ? { status } : {}),
+    });
+
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-red-500">${error.message}</td></tr>`;
+      return;
+    }
+
+    allMembers = (data as any).members ?? (Array.isArray(data) ? data : []);
+    const total       = (data as any).total      ?? allMembers.length;
+    const totalPages  = (data as any).totalPages ?? 1;
+    const currentPage = (data as any).page       ?? page;
+
+    paginator.update({ page: currentPage, totalPages, total, limit: LIMIT });
+
+    const q = (document.getElementById('search') as HTMLInputElement).value.toLowerCase();
+    const filtered = q ? allMembers.filter((m) => matchesMember(m, q)) : allMembers;
+
+    renderTable(filtered);
+  }
+
+  async function init() {
+    orgId = (document.getElementById('members-meta') as HTMLElement)?.dataset.orgId ?? '';
+    if (!orgId) {
+      document.getElementById('members-table-body')!.innerHTML =
+        `<tr><td colspan="6" class="px-6 py-8 text-center text-red-500">Could not determine your organization.</td></tr>`;
+      return;
+    }
+    loadMembers();
+  }
+
+  function matchesMember(m: any, q: string) {
+    const u = m.user ?? m;
+    return `${u.first_name} ${u.last_name}`.toLowerCase().includes(q) ||
+      u.email?.toLowerCase().includes(q) ||
+      u.phone?.includes(q) ||
+      m.responder_type?.toLowerCase().includes(q);
+  }
+
+  document.getElementById('search')?.addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.toLowerCase();
+    renderTable(q ? allMembers.filter((m) => matchesMember(m, q)) : allMembers);
+  });
+
+  document.getElementById('status-filter')?.addEventListener('change', () => loadMembers(1));
+
+  init();
+</script>

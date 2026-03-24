@@ -21,6 +21,10 @@
 | 1.3 | 2026-03-13 | Jan Dave Zamora | Added Organization API (hierarchical structure), updated section numbering |
 | 1.4 | 2026-03-13 | Jan Dave Zamora | Updated registration flow: Citizens self-register, First Aiders/Responders registered by Organizations |
 | 1.5 | 2026-03-13 | Jan Dave Zamora | Added Organization API with availability management, schedule management for Responders |
+| 1.6 | 2026-03-19 | Jan Dave Zamora | Added POST /auth/login (email+password). Added org membership invite/revoke endpoints. Added citizen membership accept/decline endpoints. Roles now returned as array. |
+| 1.7 | 2026-03-19 | Jan Dave Zamora | Added allowed_roles to org creation. Updated auth on membership endpoints (OrgAdminGuard). Added responder_type to invite/member responses. Added promote member, create dispatcher staff, sub-organization endpoints. Fixed auth descriptions (DISPATCHER → ORG_ADMIN). |
+| 1.8 | 2026-03-19 | Jan Dave Zamora | Added optional initial_admin to POST /organizations and POST /organizations/:id/sub-organizations — creates the first ORG_ADMIN account in one call. |
+| 1.9 | 2026-03-19 | Jan Dave Zamora | GET /organizations now requires auth (JwtAuthGuard). Added type and level query filters. |
 
 ---
 
@@ -141,7 +145,49 @@ POST /auth/refresh
 }
 ```
 
-### 3.4 Register
+### 3.4 Login (Email + Password)
+
+> Used by all actors: Citizens, Responders, Org Admins (DISPATCHER), and System Admin (ADMIN).
+> Same endpoint for everyone — the JWT `roles` array determines access.
+
+```
+POST /auth/login
+```
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "access_token": "eyJhbGciOiJIUzI1...",
+  "refresh_token": "eyJhbGciOiJIUzI1...",
+  "expires_at": "2026-03-19T11:00:00Z",
+  "user": {
+    "id": "user-uuid",
+    "email": "user@example.com",
+    "first_name": "Juan",
+    "last_name": "Dela Cruz",
+    "roles": ["CITIZEN"]
+  }
+}
+```
+
+> **JWT roles examples:**
+> - Citizen: `"roles": ["CITIZEN"]`
+> - Responder accepted into PNP: `"roles": ["CITIZEN", "RESPONDER"]`
+> - Org Admin (DISPATCHER): `"roles": ["CITIZEN", "DISPATCHER"]`
+> - System Admin: `"roles": ["ADMIN"]`
+
+---
+
+### 3.5 Register (Citizen Self-Registration)
 
 ```
 POST /auth/register
@@ -599,13 +645,14 @@ POST /incidents/{id}/cancel
 
 ## 7. Organization API
 
-### 7.1 Create Organization (Super Admin)
+### 7.1 Create Organization (System Admin only)
 
 ```
 POST /organizations
 ```
 
-> **Note:** Creates a national-level organization (e.g., PNP, BFP). Branch/Unit creation is handled by Organization Admins.
+> **Auth:** Requires `ADMIN` role (System Admin). The System Admin account is seeded — no public registration.
+> Creates a top-level organization (e.g., PNP, BFP). Sub-org creation is handled by Org Admins via `POST /organizations/:id/sub-organizations`.
 
 **Request:**
 ```json
@@ -614,31 +661,32 @@ POST /organizations
   "short_name": "PNP",
   "code": "PNP",
   "type": "POLICE",
+  "level": "NATIONAL",
   "address": "Camp Crame, Quezon City",
   "phone": "+63287211111",
-  "email": "info@pnp.gov.ph",
-  "website": "https://pnp.gov.ph"
+  "website": "https://pnp.gov.ph",
+  "allowed_roles": ["RESPONDER", "DISPATCHER"],
+  "initial_admin": {
+    "first_name": "Maria",
+    "last_name": "Santos",
+    "email": "admin@pnp.gov.ph",
+    "phone": "+639171234567",
+    "password": "TemporaryPass123!"
+  }
 }
 ```
 
-### 7.2 Create Branch/Unit (Organization Admin)
+> `allowed_roles` defines which roles this org may grant to members. Must be a non-empty subset of what the org type permits (see Permission Matrix in data dictionary). `ORG_ADMIN` is never in `allowed_roles` — it is granted via the promote endpoint only.
 
-```
-POST /organizations/{id}/branches
-```
+> `initial_admin` is optional. When provided, a new user account is created and immediately added as an ACTIVE `ORG_ADMIN` member of the organization in one atomic call. The email uniqueness check runs **before** the org is created, so a conflicting email fails the entire request. Omit `initial_admin` if you plan to appoint the ORG_ADMIN separately via `POST /organizations/:id/members/invite`.
 
-**Request:**
-```json
-{
-  "name": "PNP NCR",
-  "short_name": "NCR",
-  "code": "PNP-NCR",
-  "type": "POLICE",
-  "region": "NCR",
-  "address": "Camp Bagong Diwa, Taguig",
-  "phone": "+63288811211"
-}
-```
+**Response:** `201 Created` — organization object (same as `GET /organizations/:id`).
+
+**Errors:**
+- `400` — validation error (missing required field, invalid enum, etc.)
+- `401` — missing or invalid JWT
+- `403` — ADMIN role required
+- `409` — organization code already exists, or `initial_admin.email` already in use
 
 ### 7.3 List Organizations
 
@@ -646,12 +694,17 @@ POST /organizations/{id}/branches
 GET /organizations
 ```
 
+**Auth:** Requires valid JWT (`JwtAuthGuard`)
+
 **Query Parameters:**
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| parent_id | uuid | Filter by parent organization |
-| level | number | Filter by level (0=national, 1=regional, etc.) |
-| type | string | Filter by type |
+| page | number | Page number (default: 1) |
+| limit | number | Items per page, max 100 (default: 10) |
+| type | string | Filter by type: `POLICE`, `AMBULANCE`, `FIRE`, `LGU`, `OCD`, `COAST_GUARD`, `BARANGAY`, `PRIVATE` |
+| level | string | Filter by level: `NATIONAL`, `REGIONAL`, `PROVINCIAL`, `CITY`, `MUNICIPAL`, `BARANGAY` |
+
+Only `is_active = true` organizations are returned.
 
 ### 7.4 Get Organization Details
 
@@ -799,7 +852,348 @@ DELETE /organizations/{id}/responders/{responder_id}
 
 ---
 
-## 8. Agency API (Legacy)
+### 7.13 Invite Member (System Admin or Org Admin)
+
+> **The primary way citizens join an organization.** Citizens cannot apply — only a System Admin or an active ORG_ADMIN of the org can invite.
+> System Admin uses this to appoint the first ORG_ADMIN of a newly created org.
+> Org Admin invites citizens as `RESPONDER` or `DISPATCHER` only — `ORG_ADMIN` is not grantable via invite.
+
+```
+POST /organizations/{id}/members/invite
+```
+
+**Auth:** `ADMIN` system role OR active `ORG_ADMIN` membership in this org (`OrgAdminGuard`)
+
+**Request:**
+```json
+{
+  "user_id": "user-uuid",
+  "org_role": "RESPONDER",
+  "responder_type": null
+}
+```
+
+> `responder_type` is a string stored at invite time. Valid values are scoped per org type:
+> - `POLICE` → `PATROL_OFFICER`, `DETECTIVE`, `SWAT`, `K9_OFFICER`, `TRAFFIC_OFFICER`
+> - `FIRE` → `FIREFIGHTER`, `FIRE_INVESTIGATOR`, `HAZMAT_SPECIALIST`, `RESCUE_TECHNICIAN`
+> - `AMBULANCE` → `PARAMEDIC`, `EMT`, `NURSE`, `DOCTOR`
+> - `COAST_GUARD` → `RESCUE_SWIMMER`, `BOAT_OPERATOR`, `AVIATION_RESCUE`, `MARITIME_OFFICER`
+> - `BARANGAY` → `TANOD`, `HEALTH_WORKER`, `DISASTER_VOLUNTEER`
+> - `LGU` → `DISASTER_COORDINATOR`, `RELIEF_COORDINATOR`, `HEALTH_OFFICER`
+> - `OCD` → `DISASTER_COORDINATOR`, `EMERGENCY_MANAGER`, `LOGISTICS_OFFICER`
+> - `PRIVATE` → `SECURITY_OFFICER`, `FIRST_AIDER`, `SAFETY_OFFICER` — **required**, no default
+>
+> `FIRST_AIDER` may be used in any org for Red Cross chapters / BHW volunteers.
+
+**Response:**
+```json
+{
+  "id": "member-uuid",
+  "user_id": "user-uuid",
+  "organization_id": "org-uuid",
+  "org_type": "POLICE",
+  "org_role": "RESPONDER",
+  "responder_type": "POLICE",
+  "status": "INVITED",
+  "invited_by": "admin-user-uuid",
+  "created_at": "2026-03-19T10:00:00Z",
+  "updated_at": "2026-03-19T10:00:00Z",
+  "user": {
+    "id": "user-uuid",
+    "email": "juan@example.com",
+    "first_name": "Juan",
+    "last_name": "Dela Cruz"
+  }
+}
+```
+
+**Errors:**
+- `400` — `responder_type` required for `PRIVATE` org but not supplied
+- `400` — `responder_type` value not valid for this org type
+- `400` — requested `org_role` not in this org's `allowed_roles`
+- `401` — missing or invalid JWT
+- `403` — requester is not ORG_ADMIN of this org and not System ADMIN
+- `404` — target user not found or inactive
+- `409` — user already has INVITED or ACTIVE membership in this org
+
+---
+
+### 7.14 List Members (Org Admin)
+
+```
+GET /organizations/{id}/members
+```
+
+**Auth:** `ADMIN` system role OR active `ORG_ADMIN` membership in this org (`OrgAdminGuard`)
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| status | string | Filter: `INVITED`, `ACTIVE`, `DECLINED`, `SUSPENDED`. Omit for all. |
+
+**Response:**
+```json
+[
+  {
+    "id": "member-uuid",
+    "user_id": "user-uuid",
+    "organization_id": "org-uuid",
+    "org_role": "RESPONDER",
+    "org_type": "POLICE",
+    "responder_type": "POLICE",
+    "status": "ACTIVE",
+    "invited_by": "admin-uuid",
+    "reason": null,
+    "created_at": "2026-03-19T10:00:00Z",
+    "updated_at": "2026-03-19T10:00:00Z",
+    "user": {
+      "id": "user-uuid",
+      "email": "juan@example.com",
+      "first_name": "Juan",
+      "last_name": "Dela Cruz",
+      "phone": "+639171234567",
+      "profile_image_url": null
+    }
+  }
+]
+```
+
+---
+
+### 7.15 Revoke Member (Org Admin)
+
+```
+PUT /organizations/{id}/members/{memberId}/revoke
+```
+
+**Auth:** `ADMIN` system role OR active `ORG_ADMIN` membership in this org (`OrgAdminGuard`)
+
+**Request:**
+```json
+{
+  "reason": "No longer part of the unit"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "member-uuid",
+  "status": "SUSPENDED",
+  "reason": "No longer part of the unit",
+  "updated_at": "2026-03-19T12:00:00Z"
+}
+```
+
+> **Side effect:** If the user has no other ACTIVE memberships with the same `org_role`, the global role is removed from `user_roles`.
+
+---
+
+### 7.16 Promote Member (Org Admin)
+
+```
+PUT /organizations/{id}/members/{memberId}/promote
+```
+
+**Auth:** `ADMIN` system role OR active `ORG_ADMIN` membership in this org (`OrgAdminGuard`)
+
+> Changes the `org_role` of an ACTIVE member. Only `DISPATCHER` and `ORG_ADMIN` are valid promotion targets.
+> `responder_type` is cleared on promotion — DISPATCHER and ORG_ADMIN members do not field-respond.
+
+**Request:**
+```json
+{
+  "org_role": "ORG_ADMIN"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "member-uuid",
+  "org_role": "ORG_ADMIN",
+  "responder_type": null,
+  "status": "ACTIVE",
+  "updated_at": "2026-03-19T12:00:00Z"
+}
+```
+
+**Errors:**
+- `400` — member is not ACTIVE or already has that role
+- `403` — requester not ORG_ADMIN of this org and not System ADMIN
+- `404` — membership not found in this organization
+
+---
+
+### 7.17 Create Dispatcher Staff Account (Org Admin)
+
+```
+POST /organizations/{id}/staff/dispatcher
+```
+
+**Auth:** `ADMIN` system role OR active `ORG_ADMIN` membership in this org (`OrgAdminGuard`)
+
+> Creates a new user with the `DISPATCHER` system role and immediately adds them as an ACTIVE `DISPATCHER` member of this organization. Distinct from the invite flow — the account is created directly, not invited.
+
+**Request:**
+```json
+{
+  "first_name": "Maria",
+  "last_name": "Santos",
+  "email": "dispatcher@pnp.gov.ph",
+  "phone": "+639171234567",
+  "password": "TemporaryPass123!"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "member-uuid",
+  "user_id": "new-user-uuid",
+  "organization_id": "org-uuid",
+  "org_type": "POLICE",
+  "org_role": "DISPATCHER",
+  "responder_type": null,
+  "status": "ACTIVE",
+  "created_at": "2026-03-19T10:00:00Z",
+  "updated_at": "2026-03-19T10:00:00Z",
+  "user": {
+    "id": "new-user-uuid",
+    "email": "dispatcher@pnp.gov.ph",
+    "first_name": "Maria",
+    "last_name": "Santos",
+    "phone": "+639171234567"
+  }
+}
+```
+
+**Errors:**
+- `403` — requester not ORG_ADMIN of this org and not System ADMIN
+- `409` — email already in use
+
+---
+
+### 7.18 Create Sub-Organization (Org Admin)
+
+```
+POST /organizations/{id}/sub-organizations
+```
+
+**Auth:** `ADMIN` system role OR active `ORG_ADMIN` membership in this org (`OrgAdminGuard`)
+
+> Creates a new organization as a direct child of this one. `parent_organization_id` is automatically set to `:id`.
+
+**Request:** Same shape as `POST /organizations` (Section 7.1) including the optional `initial_admin` field. `parent_organization_id` in the body is ignored — it is always set to `:id`.
+
+**Response:** `201 Created` — same shape as org detail response.
+
+**Errors:**
+- `403` — requester not ORG_ADMIN of parent org and not System ADMIN
+- `404` — parent organization not found
+- `409` — organization code already exists
+
+---
+
+### 7.19 List Sub-Organizations
+
+```
+GET /organizations/{id}/sub-organizations
+```
+
+**Auth:** Public endpoint
+
+**Response:** `200 OK` — array of organization objects (direct children only, `is_active = true`).
+
+---
+
+## 7B. Citizen Membership API
+
+### 7B.1 Get My Memberships
+
+```
+GET /users/me/memberships
+```
+
+**Auth:** Any authenticated user
+
+**Query Parameters:**
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| status | string | Filter: `INVITED`, `ACTIVE`, `DECLINED`, `SUSPENDED` |
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "member-uuid",
+      "organization": {
+        "id": "org-uuid",
+        "name": "Philippine National Police",
+        "type": "POLICE",
+        "city": "Quezon City"
+      },
+      "org_role": "RESPONDER",
+      "status": "INVITED",
+      "invited_by": {
+        "id": "admin-uuid",
+        "first_name": "Maria",
+        "last_name": "Santos"
+      },
+      "created_at": "2026-03-19T10:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+---
+
+### 7B.2 Accept Invitation
+
+```
+PUT /users/me/memberships/{id}/accept
+```
+
+**Auth:** Any authenticated user (must own this membership)
+
+**Response:**
+```json
+{
+  "id": "member-uuid",
+  "org_role": "RESPONDER",
+  "status": "ACTIVE",
+  "updated_at": "2026-03-19T10:30:00Z"
+}
+```
+
+> **Side effect:** If user does not yet have the global role (`RESPONDER` or `DISPATCHER`), it is inserted into `user_roles`.
+
+---
+
+### 7B.3 Decline Invitation
+
+```
+PUT /users/me/memberships/{id}/decline
+```
+
+**Auth:** Any authenticated user (must own this membership)
+
+**Response:**
+```json
+{
+  "id": "member-uuid",
+  "status": "DECLINED",
+  "updated_at": "2026-03-19T10:30:00Z"
+}
+```
+
+> **Side effect:** None — `user_roles` unchanged, citizen retains `CITIZEN` role only.
+
+---
+
+## 8. Agency API ⚠️ Legacy
 
 ### 7.1 List Agencies
 
@@ -1962,7 +2356,7 @@ socket.on('broadcast:alert', (data) => {
 ---
 
 **Document Status:** Draft
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-19
 
 ---
 

@@ -1,0 +1,195 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { actions } from 'astro:actions';
+
+const orgId = Astro.cookies.get('active_org_id')?.value;
+if (!orgId) return Astro.redirect('/org/dashboard');
+
+let error = '';
+let saveSuccess = false;
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const allowed_roles = formData.getAll('allowed_roles') as string[];
+
+  const { error: actionError } = await Astro.callAction(actions.admin.updateOrganization, {
+    id: orgId,
+    name:          formData.get('name') as string || undefined,
+    short_name:    formData.get('short_name') as string || undefined,
+    address:       formData.get('address') as string || undefined,
+    phone:         formData.get('phone') as string || undefined,
+    website:       formData.get('website') as string || undefined,
+    allowed_roles: allowed_roles.length ? (allowed_roles as any) : undefined,
+  });
+
+  if (!actionError) saveSuccess = true;
+  else error = actionError.message;
+}
+
+const { data: org, error: loadError } = await Astro.callAction(actions.admin.getOrganization, { id: orgId });
+if (loadError) return Astro.redirect('/org/dashboard');
+---
+
+<AdminLayout title="My Organization" activeNav="organization">
+  <div class="mb-8">
+    <div class="flex items-center gap-3">
+      <h1 class="text-3xl font-bold text-gray-900">{org.name}</h1>
+      <span class={`px-2 py-1 text-xs font-medium rounded-full ${org.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+        {org.is_active !== false ? 'Active' : 'Inactive'}
+      </span>
+    </div>
+    <p class="text-gray-500 mt-1 text-sm">{org.code} · {org.type} · {org.level}</p>
+  </div>
+
+  {error && (
+    <div class="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
+      <svg class="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+      </svg>
+      {error}
+    </div>
+  )}
+
+  {saveSuccess && (
+    <div class="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6 text-sm">
+      <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      Organization updated successfully.
+    </div>
+  )}
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Edit form -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-8">
+      <h2 class="text-lg font-semibold text-gray-900 mb-6">Organization Details</h2>
+
+      <form method="POST" class="space-y-5">
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2 sm:col-span-1">
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1.5">Organization Name</label>
+            <input type="text" id="name" name="name" value={org.name}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <label for="short_name" class="block text-sm font-medium text-gray-700 mb-1.5">Short Name</label>
+            <input type="text" id="short_name" name="short_name" value={org.short_name}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+        </div>
+
+        <div>
+          <label for="code" class="block text-sm font-medium text-gray-700 mb-1.5">Code</label>
+          <input type="text" id="code" name="code" value={org.code} disabled
+            class="w-full h-11 px-4 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
+          <p class="text-xs text-gray-400 mt-1">Code cannot be changed after creation.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
+            <input type="text" value={org.type} disabled
+              class="w-full h-11 px-4 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Level</label>
+            <input type="text" value={org.level} disabled
+              class="w-full h-11 px-4 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
+          </div>
+        </div>
+
+        <div>
+          <label for="address" class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
+          <textarea id="address" name="address" rows="2"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent">{org.address}</textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
+            <input type="tel" id="phone" name="phone" value={org.phone}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+          <div>
+            <label for="website" class="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
+            <input type="url" id="website" name="website" value={org.website}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+        </div>
+
+        <div>
+          <span class="block text-sm font-medium text-gray-700 mb-2">Allowed Roles</span>
+          <div class="flex gap-6">
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" name="allowed_roles" value="RESPONDER"
+                checked={org.allowed_roles?.includes('RESPONDER')}
+                class="w-4 h-4 rounded accent-[#EB0A1E]" />
+              Responder
+            </label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" name="allowed_roles" value="DISPATCHER"
+                checked={org.allowed_roles?.includes('DISPATCHER')}
+                class="w-4 h-4 rounded accent-[#EB0A1E]" />
+              Dispatcher
+            </label>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit"
+            class="bg-[#EB0A1E] text-white px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wide hover:bg-[#C40819] transition-colors">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Overview</h3>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-gray-500">ID</dt>
+            <dd class="text-gray-900 font-mono text-xs truncate max-w-[140px]" title={org.id}>{org.id}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Members</dt>
+            <dd class="text-gray-900 font-medium">{org.member_count ?? 0}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Created</dt>
+            <dd class="text-gray-900">{org.created_at ? new Date(org.created_at).toLocaleDateString() : '—'}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Updated</dt>
+            <dd class="text-gray-900">{org.updated_at ? new Date(org.updated_at).toLocaleDateString() : '—'}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Quick Links</h3>
+        <div class="space-y-2">
+          <a href="/org/members"
+            class="flex items-center justify-between text-sm text-gray-700 hover:text-[#EB0A1E] py-2 border-b border-gray-100">
+            <span>Members</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+          <a href="/org/incidents"
+            class="flex items-center justify-between text-sm text-gray-700 hover:text-[#EB0A1E] py-2">
+            <span>Incidents</span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</AdminLayout>

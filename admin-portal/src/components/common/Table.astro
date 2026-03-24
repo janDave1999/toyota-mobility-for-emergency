@@ -1,0 +1,17 @@
+---
+interface Props {
+  variant?: 'default' | 'horizontal' | 'stacked';
+  class?: string;
+}
+
+const { 
+  variant = 'default',
+  class: className = ''
+} = Astro.props;
+---
+
+<div class:list={['overflow-x-auto', className]}>
+  <table class:list={['w-full', variant === 'stacked' && 'divide-y divide-gray-200']}>
+    <slot />
+  </table>
+</div>

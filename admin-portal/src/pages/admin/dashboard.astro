@@ -1,0 +1,150 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import StatCard from '../../components/common/StatCard.astro';
+
+const user = Astro.locals.user;
+const activeRole = Astro.locals.activeRole;
+const isAdmin = activeRole === 'ADMIN';
+---
+
+<AdminLayout title="Dashboard" activeNav="dashboard">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">
+      Welcome back, {user?.first_name || 'Admin'}
+    </h1>
+    <p class="text-gray-500 mt-1">
+      {isAdmin ? 'System overview and management' : 'Organization overview and management'}
+    </p>
+  </div>
+  
+  {isAdmin ? (
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <StatCard 
+        name="Total Organizations" 
+        value="--" 
+        icon="building" 
+        color="info"
+      />
+      <StatCard 
+        name="Active Responders" 
+        value="--" 
+        icon="users" 
+        color="success"
+      />
+      <StatCard 
+        name="Today's Incidents" 
+        value="--" 
+        icon="alert" 
+        color="danger"
+      />
+      <StatCard 
+        name="Avg Response Time" 
+        value="--" 
+        icon="clock" 
+        color="warning"
+      />
+    </div>
+  ) : (
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <StatCard 
+        name="Team Members" 
+        value="--" 
+        icon="users" 
+        color="info"
+      />
+      <StatCard 
+        name="Available Now" 
+        value="--" 
+        icon="check" 
+        color="success"
+      />
+      <StatCard 
+        name="Active Incidents" 
+        value="--" 
+        icon="alert" 
+        color="danger"
+      />
+      <StatCard 
+        name="Resolved Today" 
+        value="--" 
+        icon="check" 
+        color="success"
+      />
+    </div>
+  )}
+  
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">
+        {isAdmin ? 'Recent Incidents' : 'Active Incidents'}
+      </h2>
+      <div id="incidents-list" class="space-y-4">
+        <div class="text-center py-8 text-gray-400">
+          <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <p>Loading incidents...</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <h2 class="text-lg font-semibold text-gray-900 mb-4">
+        {isAdmin ? 'Organization Status' : 'Team Status'}
+      </h2>
+      <div id="status-list" class="space-y-3">
+        <div class="text-center py-8 text-gray-400">
+          <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <p>Loading status...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+  
+  async function loadStats() {
+    try {
+      const isAdmin = document.body.dataset.role === 'ADMIN';
+      
+      if (isAdmin) {
+        const result = await actions.admin.getStats();
+        if (result.data) {
+          const stats = result.data;
+          updateStatCard('Organizations', stats.organizations ?? '0');
+          updateStatCard('Active Responders', stats.responders ?? '0');
+          updateStatCard("Today's Incidents", stats.todayIncidents ?? '0');
+          updateStatCard('Avg Response Time', stats.avgResponseTime ?? '--');
+        }
+      } else {
+        const result = await actions.org.getStats();
+        if (result.data) {
+          const stats = result.data;
+          updateStatCard('Team Members', stats.members ?? '0');
+          updateStatCard('Available Now', stats.available ?? '0');
+          updateStatCard('Active Incidents', stats.activeIncidents ?? '0');
+          updateStatCard('Resolved Today', stats.resolvedToday ?? '0');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  }
+  
+  function updateStatCard(name: string, value: string) {
+    const cards = document.querySelectorAll('.bg-white.rounded-xl.shadow-sm');
+    cards.forEach(card => {
+      const label = card.querySelector('.text-sm');
+      if (label?.textContent?.includes(name)) {
+        const valueEl = card.querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = value;
+      }
+    });
+  }
+  
+  loadStats();
+</script>

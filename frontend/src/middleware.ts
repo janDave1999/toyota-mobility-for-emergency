@@ -4,6 +4,9 @@ import type { User } from './lib/auth';
 
 type Role = 'CITIZEN' | 'RESPONDER' | 'ADMIN' | 'DISPATCHER' | 'FIRST_AIDER';
 
+// Priority order for defaulting the active role (highest first)
+const ROLE_PRIORITY: Role[] = ['ADMIN', 'DISPATCHER', 'RESPONDER', 'FIRST_AIDER', 'CITIZEN'];
+
 interface RouteRule {
   pattern: string;
   roles?: Role[];
@@ -75,6 +78,16 @@ const session = defineMiddleware(async ({ cookies, locals }, next) => {
     locals.accessToken = accessToken;
     // Prefer the user cookie (full profile); fall back to JWT claims (minimal info)
     locals.user = getUserFromCookie(userCookie) ?? userFromJWT(accessToken);
+  }
+
+  // Resolve the active role from cookie, defaulting to the user's highest-priority role
+  const activeRoleCookie = cookies.get('active_role')?.value as Role | undefined;
+  const userRoleNames = (locals.user?.roles.map(r => r.name) ?? []) as Role[];
+
+  if (activeRoleCookie && userRoleNames.includes(activeRoleCookie)) {
+    locals.activeRole = activeRoleCookie;
+  } else {
+    locals.activeRole = ROLE_PRIORITY.find(r => userRoleNames.includes(r)) ?? null;
   }
 
   return next();

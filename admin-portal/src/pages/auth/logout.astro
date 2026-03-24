@@ -1,0 +1,9 @@
+---
+Astro.cookies.delete('access_token', { path: '/' });
+Astro.cookies.delete('refresh_token', { path: '/' });
+Astro.cookies.delete('user', { path: '/' });
+Astro.cookies.delete('org_memberships', { path: '/' });
+Astro.cookies.delete('active_org_id', { path: '/' });
+Astro.cookies.delete('active_role', { path: '/' });
+return Astro.redirect('/auth/login');
+---

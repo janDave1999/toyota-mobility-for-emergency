@@ -1,0 +1,24 @@
+---
+---
+
+<div id="confirm-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-black/40" id="modal-backdrop"></div>
+  <div class="relative bg-white rounded-xl shadow-xl w-full max-w-sm p-6">
+    <h3 id="modal-title" class="text-base font-semibold text-gray-900 mb-2"></h3>
+    <p id="modal-message" class="text-sm text-gray-500 mb-6"></p>
+    <div class="flex items-center justify-end gap-3">
+      <button id="modal-cancel"
+        class="px-4 py-2 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition disabled:opacity-50">
+        Cancel
+      </button>
+      <button id="modal-confirm"
+        class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#EB0A1E] rounded-lg hover:bg-[#C40819] transition disabled:opacity-60">
+        <svg id="modal-spinner" class="hidden w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+        </svg>
+        <span id="modal-confirm-label">Confirm</span>
+      </button>
+    </div>
+  </div>
+</div>

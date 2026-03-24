@@ -1,0 +1,175 @@
+---
+import '../../styles/global.css';
+
+const user = Astro.locals.user;
+const email = user?.email ?? '';
+const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || null;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Access Restricted — Toyota Emergency Response</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="min-h-screen font-[Inter,sans-serif] flex flex-col" style="background: #f8f8f8;">
+
+    <!-- Top bar -->
+    <header class="bg-black px-8 py-4 flex items-center gap-3">
+      <div class="w-8 h-8 bg-[#EB0A1E] rounded flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        </svg>
+      </div>
+      <span class="text-white font-semibold text-sm tracking-wide">Toyota Emergency Response</span>
+    </header>
+
+    <!-- Main -->
+    <main class="flex-1 flex items-center justify-center px-4 py-16">
+      <div class="w-full max-w-lg">
+
+        <!-- Card -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+
+          <!-- Red accent bar -->
+          <div class="h-1 bg-[#EB0A1E]"></div>
+
+          <div class="px-10 py-10">
+
+            <!-- Icon + heading -->
+            <div class="flex flex-col items-center text-center mb-8">
+              <div class="relative mb-5">
+                <div class="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center">
+                  <svg class="w-10 h-10 text-[#EB0A1E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
+                </div>
+                <!-- Decorative ring -->
+                <div class="absolute inset-0 rounded-full border-2 border-red-100 scale-110"></div>
+              </div>
+
+              <h1 class="text-2xl font-bold text-gray-900 mb-2">Portal Access Restricted</h1>
+              <p class="text-gray-500 text-sm leading-relaxed max-w-sm">
+                This portal is reserved for authorised personnel only.
+              </p>
+            </div>
+
+            <!-- Roles allowed -->
+            <div class="grid grid-cols-3 gap-3 mb-8">
+              {[
+                { label: 'System Admin', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+                { label: 'Dispatcher', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0' },
+                { label: 'Org Admin', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
+              ].map(({ label, icon }) => (
+                <div class="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                  <div class="w-9 h-9 bg-white rounded-lg shadow-sm flex items-center justify-center border border-gray-100">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={icon}/>
+                    </svg>
+                  </div>
+                  <span class="text-xs font-medium text-gray-600 text-center leading-tight">{label}</span>
+                </div>
+              ))}
+            </div>
+
+            <!-- Signed-in user -->
+            {email && (
+              <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-8">
+                <div class="w-9 h-9 bg-[#EB0A1E] rounded-full flex items-center justify-center shrink-0">
+                  <span class="text-white text-sm font-semibold">
+                    {(name ?? email).charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-gray-800 truncate">{name ?? email}</p>
+                  {name && <p class="text-xs text-gray-400 truncate">{email}</p>}
+                </div>
+                <span class="ml-auto shrink-0 text-xs font-medium bg-red-100 text-red-600 px-2 py-1 rounded-full">
+                  No access
+                </span>
+              </div>
+            )}
+
+            <!-- What you can do -->
+            <div class="bg-gray-50 border border-gray-100 rounded-xl p-5 mb-6">
+              <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-4">What you can do</p>
+              <ul class="space-y-4">
+                <li class="flex items-start gap-3">
+                  <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-800">Use the Toyota Emergency SOS app</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Send SOS alerts, track incidents, and respond in the field</p>
+                    <a
+                      href="http://localhost:4321"
+                      class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-[#EB0A1E] hover:underline"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                      </svg>
+                      Open SOS App
+                    </a>
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Contact your organization administrator</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Request a Dispatcher or Org Admin role for portal access</p>
+                  </div>
+                </li>
+                <li class="flex items-start gap-3">
+                  <div class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                    <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-gray-800">Sign in with a different account</p>
+                    <p class="text-xs text-gray-400 mt-0.5">Use an account that has been granted portal access</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Actions -->
+            <div class="space-y-3">
+              <a
+                href="/auth/logout"
+                class="w-full flex items-center justify-center gap-2 bg-[#EB0A1E] text-white px-6 py-3 rounded-xl font-semibold text-sm hover:bg-[#C40819] transition-colors"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                </svg>
+                Sign Out &amp; Use a Different Account
+              </a>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Footer note -->
+        <p class="text-center text-xs text-gray-400 mt-6">
+          Toyota Mobility Foundation · Emergency Response Platform
+        </p>
+
+      </div>
+    </main>
+
+  </body>
+</html>

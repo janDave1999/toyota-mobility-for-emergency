@@ -1,0 +1,72 @@
+---
+interface Props {
+  name: string;
+  value: string;
+  change?: string;
+  changeType?: 'positive' | 'negative' | 'neutral';
+  icon?: 'users' | 'alert' | 'clock' | 'check' | 'building';
+  color?: 'primary' | 'success' | 'warning' | 'danger' | 'info';
+}
+
+const { 
+  name, 
+  value, 
+  change, 
+  changeType = 'neutral',
+  icon = 'users',
+  color = 'primary'
+} = Astro.props;
+
+const colorClasses = {
+  primary: 'bg-toyota-red/10 text-toyota-red',
+  success: 'bg-green-100 text-green-600',
+  warning: 'bg-yellow-100 text-yellow-600',
+  danger: 'bg-red-100 text-red-600',
+  info: 'bg-blue-100 text-blue-600'
+};
+
+const changeClasses = {
+  positive: 'text-green-600',
+  negative: 'text-red-600',
+  neutral: 'text-gray-500'
+};
+---
+
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+  <div class="flex items-center justify-between">
+    <div>
+      <p class="text-sm font-medium text-gray-500">{name}</p>
+      <p class="text-3xl font-bold text-gray-900 mt-1">{value}</p>
+      {change && (
+        <p class={`text-sm mt-1 ${changeClasses[changeType]}`}>{change}</p>
+      )}
+    </div>
+    <div class={`w-12 h-12 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
+      {icon === 'users' && (
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+        </svg>
+      )}
+      {icon === 'alert' && (
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      )}
+      {icon === 'clock' && (
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      )}
+      {icon === 'check' && (
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      )}
+      {icon === 'building' && (
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+      )}
+    </div>
+  </div>
+</div>

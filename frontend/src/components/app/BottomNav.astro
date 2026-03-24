@@ -8,12 +8,12 @@ interface Props {
 
 const { active, reportsBadge = 0 } = Astro.props;
 
-const userRoles = Astro.locals.user?.roles?.map(r => r.name) ?? [];
+const activeRole = Astro.locals.activeRole;
 
-const isAdmin      = userRoles.includes('ADMIN');
-const isDispatcher = userRoles.includes('DISPATCHER');
-const isResponder  = userRoles.includes('RESPONDER');
-const isFirstAider = userRoles.includes('FIRST_AIDER');
+const isAdmin      = activeRole === 'ADMIN';
+const isDispatcher = activeRole === 'DISPATCHER';
+const isResponder  = activeRole === 'RESPONDER';
+const isFirstAider = activeRole === 'FIRST_AIDER';
 const isPrivileged = isAdmin || isDispatcher || isResponder || isFirstAider;
 
 const dashboardHref = isAdmin      ? '/admin/dashboard'
@@ -21,7 +21,7 @@ const dashboardHref = isAdmin      ? '/admin/dashboard'
                     : isResponder  ? '/responder/dashboard'
                     : '/first-aider/dashboard';
 
-const showHome         = !isAdmin && !isDispatcher;
+const showHome         = !isAdmin && !isDispatcher && !isResponder;
 const showDashboard    = isAdmin || isDispatcher;
 const showOrganization = isAdmin || isDispatcher;
 const showMap          = isPrivileged;

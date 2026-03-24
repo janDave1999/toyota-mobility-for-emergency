@@ -3,8 +3,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import AppHeader from '../../components/app/AppHeader.astro';
 import BottomNav from '../../components/app/BottomNav.astro';
 
-const { user: sessionUser } = Astro.locals;
+const { user: sessionUser, activeRole } = Astro.locals;
 const firstName = sessionUser?.first_name || sessionUser?.email?.split('@')[0] || 'User';
+
+// Role-based landing page redirects
+if (activeRole === 'RESPONDER') return Astro.redirect('/map');
+if (activeRole === 'DISPATCHER') return Astro.redirect('/dispatch/dashboard');
+if (activeRole === 'ADMIN') return Astro.redirect('/admin/dashboard');
 ---
 
 <BaseLayout title="Home">

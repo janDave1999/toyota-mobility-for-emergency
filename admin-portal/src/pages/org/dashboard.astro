@@ -1,0 +1,143 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import StatCard from '../../components/common/StatCard.astro';
+import Badge from '../../components/common/Badge.astro';
+
+const user = Astro.locals.user;
+---
+
+<AdminLayout title="Organization Dashboard" activeNav="dashboard">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">
+      Welcome back, {user?.first_name || 'Dispatcher'}
+    </h1>
+    <p class="text-gray-500 mt-1">
+      Organization overview and management
+    </p>
+  </div>
+  
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <StatCard 
+      name="Team Members" 
+      value="--" 
+      icon="users" 
+      color="info"
+    />
+    <StatCard 
+      name="Available Now" 
+      value="--" 
+      icon="check" 
+      color="success"
+    />
+    <StatCard 
+      name="Active Incidents" 
+      value="--" 
+      icon="alert" 
+      color="danger"
+    />
+    <StatCard 
+      name="Resolved Today" 
+      value="--" 
+      icon="check" 
+      color="success"
+    />
+  </div>
+  
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Active Incidents</h2>
+        <a href="/org/incidents" class="text-sm text-toyota-red hover:underline">View All</a>
+      </div>
+      <div id="active-incidents" class="space-y-4">
+        <div class="text-center py-8 text-gray-400">
+          <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-semibold text-gray-900">Team Status</h2>
+        <a href="/org/members" class="text-sm text-toyota-red hover:underline">Manage</a>
+      </div>
+      <div id="team-status" class="space-y-3">
+        <div class="text-center py-8 text-gray-400">
+          <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <p>Loading...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+  
+  async function loadDashboard() {
+    const result = await actions.org.getStats();
+    if (result.data) {
+      updateValue('Team Members', result.data.members ?? '0');
+      updateValue('Available Now', result.data.available ?? '0');
+      updateValue('Active Incidents', result.data.activeIncidents ?? '0');
+      updateValue('Resolved Today', result.data.resolvedToday ?? '0');
+    }
+  }
+  
+  async function loadActiveIncidents() {
+    const result = await actions.org.getIncidents({ status: 'REPORTED' });
+    const container = document.getElementById('active-incidents');
+    
+    if (container && result.data?.length > 0) {
+      container.innerHTML = result.data.slice(0, 5).map((incident: any) => {
+        const typeColors: Record<string, string> = {
+          POLICE: 'bg-blue-100 text-blue-700',
+          AMBULANCE: 'bg-green-100 text-green-700',
+          FIRE: 'bg-orange-100 text-orange-700',
+        };
+        return `
+          <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 ${typeColors[incident.type] || 'bg-gray-100 text-gray-700'} rounded-full flex items-center justify-center font-semibold text-sm">
+                ${incident.type?.charAt(0) || '?'}
+              </div>
+              <div>
+                <p class="font-medium text-gray-900">${incident.type} Emergency</p>
+                <p class="text-sm text-gray-500">${incident.location?.address || 'Unknown location'}</p>
+              </div>
+            </div>
+            <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">${incident.status}</span>
+          </div>
+        `;
+      }).join('');
+    } else if (container) {
+      container.innerHTML = `
+        <div class="text-center py-8 text-gray-400">
+          <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <p>No active incidents</p>
+        </div>
+      `;
+    }
+  }
+  
+  function updateValue(name: string, value: string) {
+    const cards = document.querySelectorAll('.bg-white.rounded-xl');
+    cards.forEach(card => {
+      const label = card.querySelector('.text-sm');
+      if (label?.textContent?.includes(name)) {
+        const valueEl = card.querySelector('.text-3xl');
+        if (valueEl) valueEl.textContent = value;
+      }
+    });
+  }
+  
+  loadDashboard();
+  loadActiveIncidents();
+</script>

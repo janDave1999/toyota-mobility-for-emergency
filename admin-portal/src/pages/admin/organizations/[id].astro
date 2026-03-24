@@ -1,0 +1,516 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { actions } from 'astro:actions';
+import ConfirmModal from '../../../components/common/ConfirmModal.astro';
+import Toast from '../../../components/common/Toast.astro';
+
+const VALID_RESPONDER_TYPES: Record<string, string[]> = {
+  POLICE:      ['PATROL_OFFICER', 'DETECTIVE', 'SWAT', 'K9_OFFICER', 'TRAFFIC_OFFICER', 'FIRST_AIDER'],
+  FIRE:        ['FIREFIGHTER', 'FIRE_INVESTIGATOR', 'HAZMAT_SPECIALIST', 'RESCUE_TECHNICIAN', 'FIRST_AIDER'],
+  AMBULANCE:   ['PARAMEDIC', 'EMT', 'NURSE', 'DOCTOR', 'FIRST_AIDER'],
+  COAST_GUARD: ['RESCUE_SWIMMER', 'BOAT_OPERATOR', 'AVIATION_RESCUE', 'MARITIME_OFFICER', 'FIRST_AIDER'],
+  BARANGAY:    ['TANOD', 'HEALTH_WORKER', 'DISASTER_VOLUNTEER', 'FIRST_AIDER'],
+  LGU:         ['DISASTER_COORDINATOR', 'RELIEF_COORDINATOR', 'HEALTH_OFFICER', 'FIRST_AIDER'],
+  OCD:         ['DISASTER_COORDINATOR', 'EMERGENCY_MANAGER', 'LOGISTICS_OFFICER', 'FIRST_AIDER'],
+  PRIVATE:     ['SECURITY_OFFICER', 'FIRST_AIDER', 'SAFETY_OFFICER'],
+};
+
+const { id } = Astro.params;
+let error = '';
+let saveSuccess = false;
+console.log('Organization ID from params:', id);
+
+// Handle form submissions (edit / delete)
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const intent = formData.get('intent') as string;
+
+  if (intent === 'delete') {
+    const { error: actionError } = await Astro.callAction(actions.admin.deleteOrganization, { id: id! });
+    if (!actionError) return Astro.redirect('/admin/organizations');
+    error = actionError.message;
+  }
+
+  if (intent === 'update') {
+    const allowed_roles = formData.getAll('allowed_roles') as string[];
+    const allowed_responder_types = formData.getAll('allowed_responder_types') as string[];
+    const { error: actionError } = await Astro.callAction(actions.admin.updateOrganization, {
+      id: id!,
+      name:                    formData.get('name') as string || undefined,
+      short_name:              formData.get('short_name') as string || undefined,
+      code:                    formData.get('code') as string || undefined,
+      type:                    formData.get('type') as any || undefined,
+      level:                   formData.get('level') as any || undefined,
+      region:                  formData.get('region') as string || undefined,
+      province:                formData.get('province') as string || undefined,
+      city:                    formData.get('city') as string || undefined,
+      barangay:                formData.get('barangay') as string || undefined,
+      address:                 formData.get('address') as string || undefined,
+      phone:                   formData.get('phone') as string || undefined,
+      website:                 formData.get('website') as string || undefined,
+      parent_organization_id:  formData.get('parent_organization_id') as string || undefined,
+      allowed_roles:           allowed_roles.length ? (allowed_roles as any) : undefined,
+      allowed_responder_types: allowed_responder_types.length ? allowed_responder_types : undefined,
+    });
+    if (!actionError) saveSuccess = true;
+    else error = actionError.message;
+  }
+}
+
+// Load org details
+const { data: org, error: loadError } = await Astro.callAction(actions.admin.getOrganization, { id: id! });
+console.log('Loaded organization:', org, 'Error:', loadError);
+if (loadError) return Astro.redirect('/admin/organizations');
+---
+
+<AdminLayout title={org.name} role="ADMIN">
+  <div class="mb-8 flex items-start justify-between">
+    <div>
+      <a href="/admin/organizations" class="text-gray-500 hover:text-gray-700 flex items-center gap-2 mb-4 text-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Back to Organizations
+      </a>
+      <div class="flex items-center gap-3">
+        <h1 class="text-3xl font-bold text-gray-900">{org.name}</h1>
+        <span class={`px-2 py-1 text-xs font-medium rounded-full ${org.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+          {org.is_active !== false ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+      <p class="text-gray-500 mt-1 text-sm">{org.code} · {org.type} · {org.level}</p>
+    </div>
+
+    <!-- Delete -->
+    <form method="POST">
+      <input type="hidden" name="intent" value="delete" />
+      <button type="submit"
+        onclick="return confirm('Delete this organization? This cannot be undone.')"
+        class="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm hover:bg-red-50 transition">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+        Delete
+      </button>
+    </form>
+  </div>
+
+  {error && (
+    <div class="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
+      <svg class="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+      </svg>
+      {error}
+    </div>
+  )}
+
+  {saveSuccess && (
+    <div class="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-6 text-sm">
+      <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+      </svg>
+      Organization updated successfully.
+    </div>
+  )}
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Edit form -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm p-8">
+      <h2 class="text-lg font-semibold text-gray-900 mb-6">Organization Details</h2>
+
+      <form method="POST" id="update-org-form" class="space-y-5">
+        <input type="hidden" name="intent" value="update" />
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2 sm:col-span-1">
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1.5">Organization Name</label>
+            <input type="text" id="name" name="name" value={org.name}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <label for="short_name" class="block text-sm font-medium text-gray-700 mb-1.5">Short Name</label>
+            <input type="text" id="short_name" name="short_name" value={org.short_name}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+        </div>
+
+        <div>
+          <label for="code" class="block text-sm font-medium text-gray-700 mb-1.5">Code</label>
+          <input type="text" id="code" name="code" value={org.code} disabled
+            class="w-full h-11 px-4 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 cursor-not-allowed" />
+          <p class="text-xs text-gray-400 mt-1">Code cannot be changed after creation.</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="type" class="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
+            <select id="type" name="type"
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent">
+              {['POLICE','AMBULANCE','FIRE','COAST_GUARD','BARANGAY','LGU','OCD','PRIVATE'].map((t) => (
+                <option value={t} selected={org.type === t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label for="level" class="block text-sm font-medium text-gray-700 mb-1.5">Level</label>
+            <select id="level" name="level"
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent">
+              {['NATIONAL','REGIONAL','PROVINCIAL','CITY','MUNICIPAL','BARANGAY'].map((l) => (
+                <option value={l} selected={org.level === l}>{l}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="region" class="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
+            <input type="text" id="region" name="region" value={org.region}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+          <div>
+            <label for="province" class="block text-sm font-medium text-gray-700 mb-1.5">Province</label>
+            <input type="text" id="province" name="province" value={org.province}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+          <div>
+            <label for="city" class="block text-sm font-medium text-gray-700 mb-1.5">City / Municipality</label>
+            <input type="text" id="city" name="city" value={org.city}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+          <div>
+            <label for="barangay" class="block text-sm font-medium text-gray-700 mb-1.5">Barangay</label>
+            <input type="text" id="barangay" name="barangay" value={org.barangay}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+        </div>
+
+        <div>
+          <label for="address" class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
+          <textarea id="address" name="address" rows="2"
+            class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent">{org.address}</textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
+            <input type="tel" id="phone" name="phone" value={org.phone}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+          <div>
+            <label for="website" class="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
+            <input type="url" id="website" name="website" value={org.website}
+              class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent" />
+          </div>
+        </div>
+
+        <div>
+          <label for="parent_organization_id" class="block text-sm font-medium text-gray-700 mb-1.5">Parent Organization ID <span class="text-gray-400 font-normal">(optional)</span></label>
+          <input type="text" id="parent_organization_id" name="parent_organization_id" value={org.parent_organization_id}
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent font-mono" />
+        </div>
+
+        <div>
+          <span class="block text-sm font-medium text-gray-700 mb-2">Allowed Roles</span>
+          <div class="flex gap-6">
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" name="allowed_roles" value="RESPONDER"
+                checked={org.allowed_roles?.includes('RESPONDER')}
+                class="w-4 h-4 rounded accent-[#EB0A1E]" />
+              Responder
+            </label>
+            <label class="flex items-center gap-2 text-sm cursor-pointer">
+              <input type="checkbox" name="allowed_roles" value="DISPATCHER"
+                checked={org.allowed_roles?.includes('DISPATCHER')}
+                class="w-4 h-4 rounded accent-[#EB0A1E]" />
+              Dispatcher
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <span class="block text-sm font-medium text-gray-700 mb-1">Allowed Responder Types</span>
+          <p class="text-xs text-gray-400 mb-3">Which responder types this org may assign to its RESPONDER members.</p>
+          <div id="responder-types-list" class="flex flex-wrap gap-x-6 gap-y-2">
+            {(VALID_RESPONDER_TYPES[org.type] ?? []).map((t) => (
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" name="allowed_responder_types" value={t}
+                  checked={org.allowed_responder_types?.includes(t)}
+                  class="w-4 h-4 rounded accent-[#EB0A1E]" />
+                {t.replace(/_/g, ' ')}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit"
+            class="bg-[#EB0A1E] text-white px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wide hover:bg-[#C40819] transition-colors">
+            Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Sidebar info -->
+    <div class="space-y-6">
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-4">Overview</h3>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-gray-500">ID</dt>
+            <dd class="text-gray-900 font-mono text-xs truncate max-w-[140px]" title={org.id}>{org.id}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Members</dt>
+            <dd class="text-gray-900 font-medium">{org.member_count ?? 0}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Created</dt>
+            <dd class="text-gray-900">{org.created_at ? new Date(org.created_at).toLocaleDateString() : '—'}</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-gray-500">Updated</dt>
+            <dd class="text-gray-900">{org.updated_at ? new Date(org.updated_at).toLocaleDateString() : '—'}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Admins card -->
+      <div class="bg-white rounded-xl shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide">Admins</h3>
+          <button id="show-add-admin" class="text-xs font-medium text-[#EB0A1E] hover:underline">+ Add</button>
+        </div>
+
+        <!-- Add admin inline search -->
+        <div id="add-admin-section" class="hidden mb-4">
+          <div class="relative">
+            <input
+              type="text"
+              id="admin-search-input"
+              autocomplete="off"
+              placeholder="Search by name or email…"
+              class="w-full h-9 pl-8 pr-3 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            />
+            <svg class="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <div id="admin-search-results" class="hidden mt-1 border border-gray-200 rounded-lg shadow-md bg-white max-h-48 overflow-y-auto divide-y divide-gray-100 z-10 relative text-xs"></div>
+          <button id="cancel-add-admin" class="mt-2 text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+        </div>
+
+        <!-- Admins list -->
+        <div id="admins-list" class="space-y-3 text-sm text-gray-400">Loading…</div>
+      </div>
+    </div>
+
+  </div>
+
+  <ConfirmModal />
+  <Toast />
+
+</AdminLayout>
+
+<div id="org-meta" data-org-id={id} class="hidden"></div>
+
+<script is:inline define:vars={{ validResponderTypes: VALID_RESPONDER_TYPES }}>
+  function renderResponderTypes(type) {
+    const list  = document.getElementById('responder-types-list');
+    if (!list) return;
+    const types = validResponderTypes[type] ?? [];
+    list.innerHTML = types.map(t => `
+      <label class="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" name="allowed_responder_types" value="${t}"
+          class="w-4 h-4 rounded accent-[#EB0A1E]" />
+        ${t.replace(/_/g, ' ')}
+      </label>
+    `).join('');
+  }
+
+  // Re-render all types (unchecked) when type select changes
+  document.getElementById('type')?.addEventListener('change', (e) => {
+    renderResponderTypes(e.target.value);
+  });
+</script>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { openModal } from '../../../lib/modal';
+  import { showToast } from '../../../lib/toast';
+
+  const orgId = (document.getElementById('org-meta') as HTMLElement)?.dataset.orgId ?? '';
+
+  const adminsList    = document.getElementById('admins-list')!;
+  const showAddBtn    = document.getElementById('show-add-admin')!;
+  const addSection    = document.getElementById('add-admin-section')!;
+  const cancelAddBtn  = document.getElementById('cancel-add-admin')!;
+  const searchInput   = document.getElementById('admin-search-input') as HTMLInputElement;
+  const searchResults = document.getElementById('admin-search-results')!;
+
+  let debounceTimer: ReturnType<typeof setTimeout>;
+
+  // ── Load admins ───────────────────────────────────────────────────────────
+  async function loadAdmins() {
+    adminsList.innerHTML = '<span class="text-gray-400 text-xs">Loading…</span>';
+    const { data, error } = await actions.admin.getOrgAdmins({ org_id: orgId });
+    if (error) {
+      adminsList.innerHTML = `<span class="text-red-500 text-xs">${error.message}</span>`;
+      return;
+    }
+    const members: any[] = (data as any)?.members ?? (Array.isArray(data) ? data : []);
+    const admins = members.filter((m: any) => m.org_role === 'ORG_ADMIN');
+    if (!admins.length) {
+      adminsList.innerHTML = '<p class="text-xs text-gray-400">No admins assigned yet.</p>';
+      return;
+    }
+    adminsList.innerHTML = admins.map((m: any) => {
+      const user    = m.user ?? m;
+      const name    = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || '—';
+      const initial = user.first_name?.charAt(0)?.toUpperCase() ?? '?';
+      return `
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 bg-[#EB0A1E] rounded-full flex items-center justify-center shrink-0">
+            <span class="text-white text-xs font-semibold">${initial}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium text-gray-900 truncate">${name}</div>
+            <div class="text-xs text-gray-400 truncate">${user.email ?? ''}</div>
+          </div>
+          <button data-kick-member="${m.id}" data-kick-name="${name}"
+            class="text-gray-300 hover:text-red-500 transition shrink-0" title="Remove admin">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    }).join('');
+
+    adminsList.querySelectorAll('[data-kick-member]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const el       = btn as HTMLElement;
+        const memberId = el.dataset.kickMember!;
+        const name     = el.dataset.kickName!;
+        openModal(
+          'Remove Admin',
+          `Remove ${name} as an admin of this organization?`,
+          'Remove',
+          async () => {
+            const { error } = await actions.org.kickMember({ org_id: orgId, member_id: memberId });
+            if (error) { showToast(error.message, 'error'); return; }
+            showToast(`${name} has been removed as admin.`, 'success');
+            loadAdmins();
+          },
+        );
+      });
+    });
+  }
+
+  // ── Add admin flow ────────────────────────────────────────────────────────
+  showAddBtn.addEventListener('click', () => {
+    addSection.classList.remove('hidden');
+    searchInput.focus();
+  });
+
+  cancelAddBtn.addEventListener('click', () => {
+    addSection.classList.add('hidden');
+    searchInput.value = '';
+    searchResults.classList.add('hidden');
+  });
+
+  searchInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    const q = searchInput.value.trim();
+    if (!q) { searchResults.classList.add('hidden'); return; }
+
+    debounceTimer = setTimeout(async () => {
+      const { data, error } = await actions.admin.searchUsers({ q, org_id: orgId });
+      if (error) {
+        searchResults.innerHTML = `<p class="px-3 py-2 text-red-500">${error.message}</p>`;
+        searchResults.classList.remove('hidden');
+        return;
+      }
+      const users: any[] = Array.isArray(data) ? data : [];
+      if (!users.length) {
+        searchResults.innerHTML = `<p class="px-3 py-2 text-gray-500">No users found.</p>`;
+        searchResults.classList.remove('hidden');
+        return;
+      }
+      searchResults.innerHTML = users.map((u) => {
+        if (u.is_member) {
+          return `
+            <div class="flex items-center gap-2 px-3 py-2 opacity-50 cursor-not-allowed">
+              <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-gray-600">
+                ${u.first_name?.charAt(0) ?? '?'}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="font-medium text-gray-900">${u.first_name} ${u.last_name}</div>
+                <div class="text-gray-400 truncate">${u.email ?? ''}</div>
+              </div>
+              <span class="text-xs text-gray-400 shrink-0">Already a member</span>
+            </div>
+          `;
+        }
+        return `
+          <button type="button" data-user-id="${u.id}" data-user-name="${u.first_name} ${u.last_name}"
+            class="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left transition">
+            <div class="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-gray-600">
+              ${u.first_name?.charAt(0) ?? '?'}
+            </div>
+            <div class="min-w-0">
+              <div class="font-medium text-gray-900">${u.first_name} ${u.last_name}</div>
+              <div class="text-gray-400 truncate">${u.email ?? ''}</div>
+            </div>
+          </button>
+        `;
+      }).join('');
+      searchResults.classList.remove('hidden');
+
+      searchResults.querySelectorAll('[data-user-id]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const el       = btn as HTMLElement;
+          const userId   = el.dataset.userId!;
+          const userName = el.dataset.userName!;
+          searchResults.classList.add('hidden');
+          searchInput.value = '';
+
+          openModal(
+            'Appoint Admin',
+            `Appoint ${userName} as an admin of this organization?`,
+            'Appoint',
+            async () => {
+              const { error } = await actions.admin.addOrgAdmin({ org_id: orgId, user_id: userId });
+              if (error) { showToast(error.message, 'error'); return; }
+              addSection.classList.add('hidden');
+              showToast(`${userName} has been appointed as admin.`, 'success');
+              loadAdmins();
+            },
+          );
+        });
+      });
+    }, 300);
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!searchInput.contains(e.target as Node) && !searchResults.contains(e.target as Node)) {
+      searchResults.classList.add('hidden');
+    }
+  });
+
+  // ── Update org confirmation ───────────────────────────────────────────────
+  document.getElementById('update-org-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    openModal(
+      'Save Changes',
+      'Are you sure you want to update this organization\'s details?',
+      'Save',
+      async () => { form.submit(); },
+    );
+  });
+
+  if (orgId) loadAdmins();
+</script>

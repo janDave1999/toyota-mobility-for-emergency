@@ -20,7 +20,8 @@ if (!sessionUser) {
 } else {
   try {
     const apiBase = import.meta.env.API_BASE_URL;
-    const res = await fetch(`${apiBase}api/users/${sessionUser.id}/emergency-contacts`, {
+    const apiVersion = import.meta.env.API_VERSION ?? 'v1';
+    const res = await fetch(`${apiBase}/${apiVersion}/users/${sessionUser.id}/emergency-contacts`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (res.ok) {

@@ -1,0 +1,213 @@
+---
+import AdminLayout from '@layouts/AdminLayout.astro';
+const user = Astro.locals.user;
+---
+
+<AdminLayout title="Organizations" role="ADMIN">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Organizations</h1>
+      <p class="text-gray-500 mt-1">Manage emergency response organizations</p>
+    </div>
+    <a
+      href="/admin/organizations/new"
+      class="bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition flex items-center gap-2"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Add Organization
+    </a>
+  </div>
+  
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+      <div class="flex items-center gap-4">
+        <div class="relative flex-1 max-w-md">
+          <input
+            type="text"
+            id="search"
+            placeholder="Search organizations..."
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          />
+          <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+        
+        <select id="type-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          <option value="">All Types</option>
+          <option value="POLICE">Police</option>
+          <option value="AMBULANCE">Ambulance</option>
+          <option value="FIRE">Fire</option>
+          <option value="COAST_GUARD">Coast Guard</option>
+          <option value="BARANGAY">Barangay</option>
+          <option value="LGU">LGU</option>
+          <option value="OCD">OCD</option>
+          <option value="PRIVATE">Private</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Members</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="org-table-body" class="divide-y divide-gray-200">
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+              Loading organizations...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="pagination" class="px-6 py-4 border-t border-gray-100 flex justify-end"></div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+
+  const TYPE_COLORS: Record<string, string> = {
+    POLICE:      'bg-blue-100 text-blue-700',
+    AMBULANCE:   'bg-green-100 text-green-700',
+    FIRE:        'bg-orange-100 text-orange-700',
+    COAST_GUARD: 'bg-cyan-100 text-cyan-700',
+    BARANGAY:    'bg-purple-100 text-purple-700',
+    LGU:         'bg-yellow-100 text-yellow-700',
+    OCD:         'bg-indigo-100 text-indigo-700',
+    PRIVATE:     'bg-gray-100 text-gray-700',
+  };
+
+  let allOrgs: any[] = [];
+  let currentPage = 1;
+  let totalPages = 1;
+  const LIMIT = 10;
+
+  function renderTable(orgs: any[]) {
+    const tbody = document.getElementById('org-table-body')!;
+    if (!orgs.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No organizations found.</td></tr>`;
+      renderPagination();
+      return;
+    }
+    tbody.innerHTML = orgs.map((org) => `
+      <tr class="hover:bg-gray-50" data-id="${org.id}">
+        <td class="px-6 py-4 whitespace-nowrap">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
+              <span class="text-sm font-medium text-gray-600">${org.short_name ?? org.name.charAt(0)}</span>
+            </div>
+            <div>
+              <div class="font-medium text-gray-900">${org.name}</div>
+              <div class="text-xs text-gray-400">${org.code}</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="px-2 py-1 text-xs font-medium rounded-full ${TYPE_COLORS[org.type] ?? 'bg-gray-100 text-gray-700'}">${org.type}</span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${org.level ?? '—'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${org.member_count ?? 0}</td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="px-2 py-1 text-xs font-medium rounded-full ${org.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}">
+            ${org.is_active ? 'Active' : 'Inactive'}
+          </span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+          <div class="flex items-center justify-end gap-3">
+            <a href="/admin/organizations/${org.id}" class="text-[#EB0A1E] hover:underline font-medium">View</a>
+            <button data-delete="${org.id}" class="text-gray-400 hover:text-red-600 transition" title="Delete">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('[data-delete]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = (btn as HTMLElement).dataset.delete!;
+        if (!confirm('Delete this organization? This cannot be undone.')) return;
+        const { error } = await actions.admin.deleteOrganization({ id });
+        if (error) { alert(error.message); return; }
+        loadOrganizations(currentPage);
+      });
+    });
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const container = document.getElementById('pagination')!;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+    container.innerHTML = `
+      <div class="flex items-center gap-2 text-sm">
+        <button id="prev-page" ${currentPage <= 1 ? 'disabled' : ''}
+          class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+          Previous
+        </button>
+        <span class="text-gray-500">Page ${currentPage} of ${totalPages}</span>
+        <button id="next-page" ${currentPage >= totalPages ? 'disabled' : ''}
+          class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed">
+          Next
+        </button>
+      </div>
+    `;
+    document.getElementById('prev-page')?.addEventListener('click', () => loadOrganizations(currentPage - 1));
+    document.getElementById('next-page')?.addEventListener('click', () => loadOrganizations(currentPage + 1));
+  }
+
+  async function loadOrganizations(page = 1) {
+    const type  = (document.getElementById('type-filter') as HTMLSelectElement).value as any;
+    const tbody = document.getElementById('org-table-body')!;
+    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Loading…</td></tr>`;
+
+    const { data, error } = await actions.admin.getOrganizations({
+      page,
+      limit: LIMIT,
+      ...(type ? { type } : {}),
+    });
+
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-red-500">${error.message}</td></tr>`;
+      return;
+    }
+
+    allOrgs     = data.organizations ?? [];
+    currentPage = data.page ?? 1;
+    totalPages  = data.totalPages ?? 1;
+
+    const q = (document.getElementById('search') as HTMLInputElement).value.toLowerCase();
+    const filtered = q
+      ? allOrgs.filter((o) => o.name.toLowerCase().includes(q) || o.code?.toLowerCase().includes(q))
+      : allOrgs;
+
+    renderTable(filtered);
+  }
+
+  // Search filters client-side within the current page
+  document.getElementById('search')?.addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.toLowerCase();
+    renderTable(q
+      ? allOrgs.filter((o) => o.name.toLowerCase().includes(q) || o.code?.toLowerCase().includes(q))
+      : allOrgs
+    );
+  });
+
+  // Type filter re-fetches from API
+  document.getElementById('type-filter')?.addEventListener('change', () => loadOrganizations(1));
+
+  loadOrganizations();
+</script>

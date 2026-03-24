@@ -20,6 +20,10 @@
 | 1.0 | 2026-03-13 | Jan Dave Zamora | Initial consolidated version |
 | 1.1 | 2026-03-13 | Jan Dave Zamora | Added Organization hierarchy (national→regional→provincial→city), deprecated Agency in favor of Organization |
 | 1.2 | 2026-03-13 | Jan Dave Zamora | Updated registration flow: Citizens self-register, First Aiders/Responders registered by Organizations |
+| 1.3 | 2026-03-19 | Jan Dave Zamora | Replaced OrganizationAdmin with OrganizationMember (invite-based). Added RESPONDER to UserRole. Added responder type differentiation. Removed PENDING from member status. |
+| 1.4 | 2026-03-19 | Jan Dave Zamora | Added ORG_ADMIN to OrgMemberRole. Added responder_type (6 values, stored not derived). Added allowed_roles + parent_organization_id to Organization. Updated permission matrix (all org types now allow RESPONDER). Added promote/createDispatcher/sub-org flows. |
+| 1.5 | 2026-03-19 | Jan Dave Zamora | Added initial_admin to org creation — one-call bootstrap of first ORG_ADMIN account. |
+| 1.6 | 2026-03-23 | Jan Dave Zamora | Added allowed_responder_types to Organization — System Admin sets the permitted responder type subset at creation. Two-tier enforcement: VALID_RESPONDER_TYPES ceiling (backend) + org.allowed_responder_types (per-org). responder_type now required on all RESPONDER invites, validated against org list. |
 
 ---
 
@@ -77,8 +81,9 @@ interface User {
 
 enum UserRole {
   CITIZEN = "CITIZEN",
-  DISPATCHER = "DISPATCHER",
-  ADMIN = "ADMIN"
+  RESPONDER = "RESPONDER",     // Granted when invited by org and accepted
+  DISPATCHER = "DISPATCHER",   // Org Admin — granted when invited by org and accepted
+  ADMIN = "ADMIN"              // System Admin — seeded only, no public registration
 }
 ```
 
@@ -89,15 +94,19 @@ enum UserRole {
 ```typescript
 interface Organization {
   id: string;
-  name: string;                   // Philippine National Police
-  short_name: string;             // PNP
-  code: string;                   // Unique code (PNP, BFP, LGU-NCR, etc.)
-  type: OrganizationType;         // POLICE, FIRE, AMBULANCE, LGU, OCD
-  
+  name: string;                         // Philippine National Police
+  short_name: string;                   // PNP
+  code: string;                         // Unique code (PNP, BFP, LGU-NCR, etc.)
+  type: OrganizationType;               // POLICE, FIRE, AMBULANCE, LGU, OCD, etc.
+  level: OrganizationLevel;             // NATIONAL, REGIONAL, PROVINCIAL, CITY, MUNICIPAL, BARANGAY
+
   // Hierarchy
-  parent_id: string | null;        // Parent organization (null for national HQ)
-  level: number;                   // 0=National, 1=Regional, 2=Provincial, 3=City/Municipal
-  
+  parent_organization_id: string | null; // Parent org UUID (null for top-level)
+
+  // Membership rules — set by System Admin at creation
+  allowed_roles: OrgMemberRole[];             // Subset of role ceiling for org type
+  allowed_responder_types: ResponderType[];   // Subset of valid responder types for org type; governs what ORG_ADMIN may assign at invite time
+
   // Location
   region: string | null;
   province: string | null;
@@ -105,15 +114,11 @@ interface Organization {
   barangay: string | null;
   address: string;
   phone: string;
-  email: string;
   website: string;
-  latitude: number;
-  longitude: number;
-  
+
   // Status
   is_active: boolean;
   created_at: timestamp;
-  updated_at: timestamp;
 }
 
 enum OrganizationType {
@@ -128,42 +133,131 @@ enum OrganizationType {
 }
 
 enum OrganizationLevel {
-  NATIONAL = 0,       // e.g., PNP Headquarters
-  REGIONAL = 1,      // e.g., NCR Police Office
-  PROVINCIAL = 2,     // e.g., Rizal Provincial Police
-  CITY = 3,          // e.g., Quezon City Police District
-  MUNICIPAL = 4,     // e.g., Municipality of Rodriguez
-  BARANGAY = 5       // e.g., Barangay Defense System
+  NATIONAL   = "NATIONAL",    // e.g., PNP Headquarters
+  REGIONAL   = "REGIONAL",    // e.g., NCR Police Office
+  PROVINCIAL = "PROVINCIAL",  // e.g., Rizal Provincial Police
+  CITY       = "CITY",        // e.g., Quezon City Police District
+  MUNICIPAL  = "MUNICIPAL",   // e.g., Municipality of Rodriguez
+  BARANGAY   = "BARANGAY"     // e.g., Barangay Defense System
 }
 ```
 
 ---
 
-### 2.3 Organization Admin Entity
+### 2.3 Organization Member Entity
+
+> **Replaces:** `OrganizationAdmin` and `user_organizations`.
+> Tracks invite-based membership with full role, status, and responder context.
+> Citizens cannot apply — only an ORG_ADMIN of the org or a System Admin can invite.
 
 ```typescript
-interface OrganizationAdmin {
+interface OrganizationMember {
   id: string;
-  user_id: string;              // FK to User
-  organization_id: string;       // FK to Organization
-  role: OrganizationAdminRole;   // ADMIN, SUPER_ADMIN
-  permissions: string[];         // ['manage_responders', 'view_stats', 'dispatch', 'manage_branches']
-  is_active: boolean;
-  approved_by: string;          // FK to User (supervisor)
-  approved_at: timestamp;
+  user_id: string;                    // FK to User (the invited person)
+  organization_id: string;             // FK to Organization
+  org_type: OrganizationType;          // Denormalized from org for fast dispatch routing
+  org_role: OrgMemberRole;             // RESPONDER | DISPATCHER | ORG_ADMIN
+  responder_type: ResponderType | null; // Stored at invite time; null for DISPATCHER/ORG_ADMIN
+  status: OrgMemberStatus;             // INVITED → ACTIVE | DECLINED, ACTIVE → SUSPENDED
+  invited_by: string | null;           // FK to User (the admin who sent the invite)
+  reason: string | null;               // Reason for suspension (if SUSPENDED)
   created_at: timestamp;
   updated_at: timestamp;
 }
 
-enum OrganizationAdminRole {
-  ADMIN = "ADMIN",
-  SUPER_ADMIN = "SUPER_ADMIN"
+enum OrgMemberRole {
+  RESPONDER  = "RESPONDER",   // Field responder — receives incident alerts scoped to responder_type
+  DISPATCHER = "DISPATCHER",  // Operational staff — dispatches responders, manages incidents
+  ORG_ADMIN  = "ORG_ADMIN"    // Org-scoped admin — manages membership, creates sub-orgs/dispatchers
+                               // Granted via promote endpoint only, not via invite
 }
+
+enum OrgMemberStatus {
+  INVITED   = "INVITED",    // Org admin invited — awaiting citizen response
+  ACTIVE    = "ACTIVE",     // Citizen accepted — global role granted in user_roles
+  DECLINED  = "DECLINED",   // Citizen declined — no role change
+  SUSPENDED = "SUSPENDED"   // Org admin revoked — global role removed if no other active memberships
+}
+
+// responder_type is a free string stored at invite time.
+// Valid values are scoped per org type (enforced by the portal UI; backend stores as-is).
+
+// POLICE org
+type PoliceResponderType = "PATROL_OFFICER" | "DETECTIVE" | "SWAT" | "K9_OFFICER" | "TRAFFIC_OFFICER";
+
+// FIRE org
+type FireResponderType = "FIREFIGHTER" | "FIRE_INVESTIGATOR" | "HAZMAT_SPECIALIST" | "RESCUE_TECHNICIAN";
+
+// AMBULANCE org
+type AmbulanceResponderType = "PARAMEDIC" | "EMT" | "NURSE" | "DOCTOR";
+
+// COAST_GUARD org
+type CoastGuardResponderType = "RESCUE_SWIMMER" | "BOAT_OPERATOR" | "AVIATION_RESCUE" | "MARITIME_OFFICER";
+
+// BARANGAY org
+type BarangayResponderType = "TANOD" | "HEALTH_WORKER" | "DISASTER_VOLUNTEER";
+
+// LGU org
+type LGUResponderType = "DISASTER_COORDINATOR" | "RELIEF_COORDINATOR" | "HEALTH_OFFICER";
+
+// OCD org
+type OCDResponderType = "DISASTER_COORDINATOR" | "EMERGENCY_MANAGER" | "LOGISTICS_OFFICER";
+
+// PRIVATE org (must be supplied explicitly — no auto-derivation)
+type PrivateResponderType = "SECURITY_OFFICER" | "FIRST_AIDER" | "SAFETY_OFFICER";
+
+// Cross-org override: use "FIRST_AIDER" in any org for Red Cross chapters / BHW volunteers
 ```
+
+**Permission Matrix — which org types can grant which roles:**
+
+> Two-tier enforcement: `ORG_ALLOWED_ROLES` constant is the ceiling per org type.
+> Each org also stores `allowed_roles` — a chosen subset of the ceiling, validated at creation.
+> Invites are checked against `org.allowed_roles`. ORG_ADMIN is granted via promote only.
+
+| Org Type | Role Ceiling | Notes |
+|----------|-------------|-------|
+| `POLICE`, `AMBULANCE`, `FIRE`, `COAST_GUARD`, `PRIVATE` | `RESPONDER`, `DISPATCHER` | Operational emergency units |
+| `LGU`, `OCD`, `BARANGAY` | `RESPONDER`, `DISPATCHER` | BERT/LDRRMO field teams are RESPONDER |
+
+**Responder Type — two-tier enforcement:**
+
+`responder_type` is required when inviting a RESPONDER. It is validated against `org.allowed_responder_types`, which is set by the System Admin at org creation.
+
+**Tier 1 — Ceiling per org type** (backend constant `VALID_RESPONDER_TYPES`):
+
+| Org Type | Valid `responder_type` ceiling |
+|----------|-------------------------------|
+| `POLICE` | `PATROL_OFFICER`, `DETECTIVE`, `SWAT`, `K9_OFFICER`, `TRAFFIC_OFFICER`, `FIRST_AIDER` |
+| `FIRE` | `FIREFIGHTER`, `FIRE_INVESTIGATOR`, `HAZMAT_SPECIALIST`, `RESCUE_TECHNICIAN`, `FIRST_AIDER` |
+| `AMBULANCE` | `PARAMEDIC`, `EMT`, `NURSE`, `DOCTOR`, `FIRST_AIDER` |
+| `COAST_GUARD` | `RESCUE_SWIMMER`, `BOAT_OPERATOR`, `AVIATION_RESCUE`, `MARITIME_OFFICER`, `FIRST_AIDER` |
+| `BARANGAY` | `TANOD`, `HEALTH_WORKER`, `DISASTER_VOLUNTEER`, `FIRST_AIDER` |
+| `LGU` | `DISASTER_COORDINATOR`, `RELIEF_COORDINATOR`, `HEALTH_OFFICER`, `FIRST_AIDER` |
+| `OCD` | `DISASTER_COORDINATOR`, `EMERGENCY_MANAGER`, `LOGISTICS_OFFICER`, `FIRST_AIDER` |
+| `PRIVATE` | `SECURITY_OFFICER`, `FIRST_AIDER`, `SAFETY_OFFICER` |
+
+**Tier 2 — Per-org allowed list** (`organizations.allowed_responder_types`):
+System Admin sets this at org creation as a subset of the ceiling above. ORG_ADMIN may only assign `responder_type` values from this list when inviting RESPONDER members.
+
+Use `FIRST_AIDER` in any org for Red Cross chapters, BHWs, or trained volunteers fielding first-aid support.
+
+A user can be an active member of multiple organizations simultaneously, receiving alerts for each `responder_type`.
+
+**Two-Actor Authorization Model:**
+
+| Actor | System Role | What They Can Do |
+|-------|-------------|-----------------|
+| System Admin | `ADMIN` (global) | Create/update/deactivate orgs; appoint first ORG_ADMIN via invite |
+| Org Admin | `ORG_ADMIN` membership (org-scoped) | Invite/promote/revoke members; create dispatcher accounts; create sub-orgs; update org profile |
+
+> **Bootstrap (preferred):** System Admin can create the first ORG_ADMIN in the same call as org creation by including `initial_admin` in `POST /organizations`. The account is created as ACTIVE immediately — no invite flow needed. Email uniqueness is validated before the org is inserted, so the entire request is atomic.
+
+> **Bootstrap (alternative):** Omit `initial_admin` and appoint the ORG_ADMIN separately via `POST /organizations/:id/members/invite`. OrgAdminGuard always passes for System Admin, so there is no chicken-and-egg problem.
 
 ---
 
-### 2.4 Agency Entity (Legacy - Use Organization Instead)
+### 2.4 Agency Entity ⚠️ DEPRECATED — Use Organization + OrganizationMember Instead
 
 ```typescript
 interface Agency {
@@ -201,7 +295,7 @@ enum AgencyType {
 
 ---
 
-### 2.2.1 Agency Admin Entity
+### 2.2.1 Agency Admin Entity ⚠️ DEPRECATED — Use OrganizationMember with org_role=DISPATCHER
 
 ```typescript
 interface AgencyAdmin {
@@ -854,7 +948,7 @@ enum BroadcastStatus {
 ---
 
 **Document Status:** Draft
-**Last Updated:** 2026-03-13
+**Last Updated:** 2026-03-19
 
 ---
 

@@ -1,0 +1,390 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const allowed_roles = formData.getAll('allowed_roles') as string[];
+  const allowed_responder_types = formData.getAll('allowed_responder_types') as string[];
+  const adminUserId = formData.get('initial_admin_user_id') as string;
+
+  const { actions } = await import('astro:actions');
+  const { error: actionError } = await Astro.callAction(actions.admin.createOrganization, {
+    name:                    formData.get('name') as string,
+    short_name:              formData.get('short_name') as string,
+    code:                    formData.get('code') as string,
+    type:                    formData.get('type') as any,
+    level:                   formData.get('level') as any,
+    region:                  formData.get('region') as string || undefined,
+    province:                formData.get('province') as string || undefined,
+    city:                    formData.get('city') as string || undefined,
+    barangay:                formData.get('barangay') as string || undefined,
+    address:                 formData.get('address') as string || undefined,
+    phone:                   formData.get('phone') as string || undefined,
+    website:                 formData.get('website') as string || undefined,
+    parent_organization_id:  formData.get('parent_organization_id') as string || undefined,
+    allowed_roles:           allowed_roles as any,
+    allowed_responder_types: allowed_responder_types.length ? allowed_responder_types : undefined,
+    initial_admin:           adminUserId ? { user_id: adminUserId } : undefined,
+  });
+
+  if (!actionError) {
+    return Astro.redirect('/admin/organizations');
+  }
+  error = actionError.message;
+}
+---
+
+<AdminLayout title="New Organization" role="ADMIN">
+  <div class="mb-8">
+    <a href="/admin/organizations" class="text-gray-500 hover:text-gray-700 flex items-center gap-2 mb-4 text-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+      </svg>
+      Back to Organizations
+    </a>
+    <h1 class="text-3xl font-bold text-gray-900">Add New Organization</h1>
+    <p class="text-gray-500 mt-1">Create a new emergency response organization</p>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm p-8 max-w-2xl">
+    {error && (
+      <div class="flex items-start gap-3 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
+        <svg class="w-4 h-4 mt-0.5 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        {error}
+      </div>
+    )}
+
+    <form method="POST" class="space-y-6">
+
+      <!-- Name + Short Name -->
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2 sm:col-span-1">
+          <label for="name" class="block text-sm font-medium text-gray-700 mb-1.5">
+            Organization Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text" id="name" name="name" required
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="Philippine National Police"
+          />
+        </div>
+        <div class="col-span-2 sm:col-span-1">
+          <label for="short_name" class="block text-sm font-medium text-gray-700 mb-1.5">
+            Short Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text" id="short_name" name="short_name" required
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="PNP"
+          />
+        </div>
+      </div>
+
+      <!-- Code -->
+      <div>
+        <label for="code" class="block text-sm font-medium text-gray-700 mb-1.5">
+          Organization Code <span class="text-red-500">*</span>
+        </label>
+        <input
+          type="text" id="code" name="code" required
+          class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+          placeholder="PNP"
+        />
+        <p class="text-xs text-gray-400 mt-1">Unique identifier code. Cannot be changed after creation.</p>
+      </div>
+
+      <!-- Type + Level -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="type" class="block text-sm font-medium text-gray-700 mb-1.5">
+            Type <span class="text-red-500">*</span>
+          </label>
+          <select id="type" name="type" required
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent">
+            <option value="">Select type…</option>
+            <option value="POLICE">Police</option>
+            <option value="AMBULANCE">Ambulance</option>
+            <option value="FIRE">Fire Department</option>
+            <option value="COAST_GUARD">Coast Guard</option>
+            <option value="BARANGAY">Barangay</option>
+            <option value="LGU">LGU</option>
+            <option value="OCD">OCD</option>
+            <option value="PRIVATE">Private</option>
+          </select>
+        </div>
+        <div>
+          <label for="level" class="block text-sm font-medium text-gray-700 mb-1.5">
+            Level <span class="text-red-500">*</span>
+          </label>
+          <select id="level" name="level" required
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent">
+            <option value="">Select level…</option>
+            <option value="NATIONAL">National</option>
+            <option value="REGIONAL">Regional</option>
+            <option value="PROVINCIAL">Provincial</option>
+            <option value="CITY">City</option>
+            <option value="MUNICIPAL">Municipal</option>
+            <option value="BARANGAY">Barangay</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Location -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="region" class="block text-sm font-medium text-gray-700 mb-1.5">Region</label>
+          <input type="text" id="region" name="region"
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="NCR" />
+        </div>
+        <div>
+          <label for="province" class="block text-sm font-medium text-gray-700 mb-1.5">Province</label>
+          <input type="text" id="province" name="province"
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="Metro Manila" />
+        </div>
+        <div>
+          <label for="city" class="block text-sm font-medium text-gray-700 mb-1.5">City / Municipality</label>
+          <input type="text" id="city" name="city"
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="Quezon City" />
+        </div>
+        <div>
+          <label for="barangay" class="block text-sm font-medium text-gray-700 mb-1.5">Barangay</label>
+          <input type="text" id="barangay" name="barangay"
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="Barangay 1" />
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div>
+        <label for="address" class="block text-sm font-medium text-gray-700 mb-1.5">Address</label>
+        <textarea
+          id="address" name="address" rows="2"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+          placeholder="Camp Crame, Quezon City"
+        ></textarea>
+      </div>
+
+      <!-- Phone + Website -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label for="phone" class="block text-sm font-medium text-gray-700 mb-1.5">Phone</label>
+          <input
+            type="tel" id="phone" name="phone"
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="+63287211111"
+          />
+        </div>
+        <div>
+          <label for="website" class="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
+          <input
+            type="url" id="website" name="website"
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+            placeholder="https://pnp.gov.ph"
+          />
+        </div>
+      </div>
+
+      <!-- Parent Organization -->
+      <div>
+        <label for="parent_organization_id" class="block text-sm font-medium text-gray-700 mb-1.5">Parent Organization ID <span class="text-gray-400 font-normal">(optional)</span></label>
+        <input type="text" id="parent_organization_id" name="parent_organization_id"
+          class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent font-mono"
+          placeholder="UUID of parent organization" />
+        <p class="text-xs text-gray-400 mt-1">Leave blank for top-level organizations.</p>
+      </div>
+
+      <!-- Allowed Roles -->
+      <div>
+        <span class="block text-sm font-medium text-gray-700 mb-2">
+          Allowed Roles <span class="text-red-500">*</span>
+        </span>
+        <p class="text-xs text-gray-400 mb-3">Which roles this organization may grant to its members.</p>
+        <div class="flex gap-6">
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" name="allowed_roles" value="RESPONDER" checked
+              class="w-4 h-4 rounded accent-[#EB0A1E]" />
+            Responder
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" name="allowed_roles" value="DISPATCHER"
+              class="w-4 h-4 rounded accent-[#EB0A1E]" />
+            Dispatcher
+          </label>
+        </div>
+      </div>
+
+      <!-- Allowed Responder Types -->
+      <div>
+        <span class="block text-sm font-medium text-gray-700 mb-1">Allowed Responder Types</span>
+        <p class="text-xs text-gray-400 mb-3">Select a type above first. Choose which responder types this org may assign to its RESPONDER members.</p>
+        <div id="responder-types-container" class="hidden">
+          <div id="responder-types-list" class="flex flex-wrap gap-x-6 gap-y-2"></div>
+        </div>
+        <p id="responder-types-placeholder" class="text-xs text-gray-400 italic">Select an org type to see available responder types.</p>
+      </div>
+
+      <!-- Initial Org Admin (optional) -->
+      <div class="border-t border-gray-100 pt-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-0.5">Initial Org Admin <span class="text-gray-400 font-normal">(optional)</span></h3>
+        <p class="text-xs text-gray-400 mb-4">Search for an existing user to appoint as the first ORG_ADMIN. Leave blank to appoint later.</p>
+
+        <input type="hidden" id="initial_admin_user_id" name="initial_admin_user_id" />
+
+        <div class="relative">
+          <input
+            type="text"
+            id="admin-search"
+            placeholder="Search by name or email…"
+            autocomplete="off"
+            class="w-full h-11 px-4 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#EB0A1E] focus:border-transparent"
+          />
+          <div id="admin-search-results" class="hidden absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto"></div>
+        </div>
+
+        <div id="admin-selected" class="hidden mt-3 flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3">
+          <div id="admin-avatar" class="w-9 h-9 bg-[#EB0A1E] rounded-full flex items-center justify-center shrink-0">
+            <span id="admin-initial" class="text-white text-sm font-semibold"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p id="admin-name" class="text-sm font-medium text-gray-900 truncate"></p>
+            <p id="admin-email-display" class="text-xs text-gray-400 truncate"></p>
+          </div>
+          <button type="button" id="admin-clear" class="text-gray-400 hover:text-red-500 transition">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 pt-2">
+        <button
+          type="submit"
+          class="bg-[#EB0A1E] text-white px-6 py-3 rounded-lg font-semibold text-sm uppercase tracking-wide hover:bg-[#C40819] transition-colors"
+        >
+          Create Organization
+        </button>
+        <a
+          href="/admin/organizations"
+          class="px-6 py-3 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+        >
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</AdminLayout>
+
+<script>
+  const VALID_RESPONDER_TYPES: Record<string, string[]> = {
+    POLICE:      ['PATROL_OFFICER', 'DETECTIVE', 'SWAT', 'K9_OFFICER', 'TRAFFIC_OFFICER', 'FIRST_AIDER'],
+    FIRE:        ['FIREFIGHTER', 'FIRE_INVESTIGATOR', 'HAZMAT_SPECIALIST', 'RESCUE_TECHNICIAN', 'FIRST_AIDER'],
+    AMBULANCE:   ['PARAMEDIC', 'EMT', 'NURSE', 'DOCTOR', 'FIRST_AIDER'],
+    COAST_GUARD: ['RESCUE_SWIMMER', 'BOAT_OPERATOR', 'AVIATION_RESCUE', 'MARITIME_OFFICER', 'FIRST_AIDER'],
+    BARANGAY:    ['TANOD', 'HEALTH_WORKER', 'DISASTER_VOLUNTEER', 'FIRST_AIDER'],
+    LGU:         ['DISASTER_COORDINATOR', 'RELIEF_COORDINATOR', 'HEALTH_OFFICER', 'FIRST_AIDER'],
+    OCD:         ['DISASTER_COORDINATOR', 'EMERGENCY_MANAGER', 'LOGISTICS_OFFICER', 'FIRST_AIDER'],
+    PRIVATE:     ['SECURITY_OFFICER', 'FIRST_AIDER', 'SAFETY_OFFICER'],
+  };
+
+  function updateResponderTypes(orgType: string) {
+    const container   = document.getElementById('responder-types-container')!;
+    const list        = document.getElementById('responder-types-list')!;
+    const placeholder = document.getElementById('responder-types-placeholder')!;
+    const types       = VALID_RESPONDER_TYPES[orgType] ?? [];
+
+    if (!types.length) {
+      container.classList.add('hidden');
+      placeholder.classList.remove('hidden');
+      return;
+    }
+
+    list.innerHTML = types.map(t => `
+      <label class="flex items-center gap-2 text-sm cursor-pointer">
+        <input type="checkbox" name="allowed_responder_types" value="${t}" checked
+          class="w-4 h-4 rounded accent-[#EB0A1E]" />
+        ${t.replace(/_/g, ' ')}
+      </label>
+    `).join('');
+
+    container.classList.remove('hidden');
+    placeholder.classList.add('hidden');
+  }
+
+  document.getElementById('type')?.addEventListener('change', (e) => {
+    updateResponderTypes((e.target as HTMLSelectElement).value);
+  });
+
+  // Initial admin search
+  import { actions } from 'astro:actions';
+
+  let adminDebounce: ReturnType<typeof setTimeout>;
+
+  const adminSearch  = document.getElementById('admin-search') as HTMLInputElement;
+  const adminResults = document.getElementById('admin-search-results')!;
+  const adminSelected = document.getElementById('admin-selected')!;
+  const adminUserIdInput = document.getElementById('initial_admin_user_id') as HTMLInputElement;
+
+  function selectAdmin(user: any) {
+    adminUserIdInput.value = user.id;
+    (document.getElementById('admin-name') as HTMLElement).textContent =
+      `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.email;
+    (document.getElementById('admin-email-display') as HTMLElement).textContent = user.email;
+    (document.getElementById('admin-initial') as HTMLElement).textContent =
+      (user.first_name?.charAt(0) ?? user.email?.charAt(0) ?? '?').toUpperCase();
+    adminSelected.classList.remove('hidden');
+    adminSearch.classList.add('hidden');
+    adminResults.classList.add('hidden');
+  }
+
+  document.getElementById('admin-clear')?.addEventListener('click', () => {
+    adminUserIdInput.value = '';
+    adminSearch.value = '';
+    adminSelected.classList.add('hidden');
+    adminSearch.classList.remove('hidden');
+  });
+
+  adminSearch.addEventListener('input', () => {
+    clearTimeout(adminDebounce);
+    const q = adminSearch.value.trim();
+    if (q.length < 2) { adminResults.classList.add('hidden'); return; }
+    adminDebounce = setTimeout(async () => {
+      const { data, error } = await actions.admin.searchUsers({ q });
+      if (error || !data) return;
+      const users: any[] = Array.isArray(data) ? data : (data as any).users ?? [];
+      if (!users.length) {
+        adminResults.innerHTML = `<p class="px-4 py-3 text-sm text-gray-400">No users found.</p>`;
+        adminResults.classList.remove('hidden');
+        return;
+      }
+      adminResults.innerHTML = users.map(u => {
+        const name = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || u.email;
+        const initial = (u.first_name?.charAt(0) ?? u.email?.charAt(0) ?? '?').toUpperCase();
+        return `
+          <button type="button" data-user='${JSON.stringify(u)}'
+            class="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-left transition">
+            <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold text-gray-600">
+              ${initial}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">${name}</p>
+              <p class="text-xs text-gray-400 truncate">${u.email}</p>
+            </div>
+          </button>`;
+      }).join('');
+      adminResults.classList.remove('hidden');
+      adminResults.querySelectorAll('[data-user]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          selectAdmin(JSON.parse((btn as HTMLElement).dataset.user!));
+        });
+      });
+    }, 300);
+  });
+</script>

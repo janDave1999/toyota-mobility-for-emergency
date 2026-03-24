@@ -1,0 +1,171 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Incidents" role="DISPATCHER">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Incidents</h1>
+    <p class="text-gray-500 mt-1">View and manage incidents for your organization</p>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+      <div class="flex items-center gap-4 flex-wrap">
+        <div class="relative flex-1 min-w-[200px] max-w-md">
+          <input
+            type="text"
+            id="search"
+            placeholder="Search incidents..."
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          />
+          <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+        </div>
+
+        <select id="status-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          <option value="">All Status</option>
+          <option value="REPORTED">Reported</option>
+          <option value="DISPATCHED">Dispatched</option>
+          <option value="EN_ROUTE">En Route</option>
+          <option value="ARRIVED">Arrived</option>
+          <option value="RESOLVED">Resolved</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+
+        <select id="type-filter" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          <option value="">All Types</option>
+          <option value="POLICE">Police</option>
+          <option value="AMBULANCE">Ambulance</option>
+          <option value="FIRE">Fire</option>
+          <option value="COAST_GUARD">Coast Guard</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="incidents-table-body" class="divide-y divide-gray-200">
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+              Loading incidents...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="pagination" class="px-6 py-4 border-t border-gray-100 flex justify-end"></div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { actions } from 'astro:actions';
+  import { createPaginator } from '../../../lib/paginate';
+
+  const TYPE_COLORS: Record<string, string> = {
+    POLICE:      'bg-blue-100 text-blue-700',
+    AMBULANCE:   'bg-green-100 text-green-700',
+    FIRE:        'bg-orange-100 text-orange-700',
+    COAST_GUARD: 'bg-cyan-100 text-cyan-700',
+  };
+
+  const STATUS_COLORS: Record<string, string> = {
+    REPORTED:   'bg-yellow-100 text-yellow-700',
+    DISPATCHED: 'bg-blue-100 text-blue-700',
+    EN_ROUTE:   'bg-purple-100 text-purple-700',
+    ARRIVED:    'bg-green-100 text-green-700',
+    RESOLVED:   'bg-gray-100 text-gray-700',
+    CANCELLED:  'bg-red-100 text-red-700',
+  };
+
+  const LIMIT = 10;
+  let allIncidents: any[] = [];
+
+  const paginator = createPaginator('pagination', (page) => loadIncidents(page));
+
+  function renderTable(incidents: any[]) {
+    const tbody = document.getElementById('incidents-table-body')!;
+    if (!incidents.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No incidents found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = incidents.map((inc) => `
+      <tr class="hover:bg-gray-50">
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">${inc.id?.slice(0, 8) ?? '—'}</td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="px-2 py-1 text-xs font-medium rounded-full ${TYPE_COLORS[inc.type] ?? 'bg-gray-100 text-gray-700'}">${inc.type ?? '—'}</span>
+        </td>
+        <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">${inc.location?.address ?? 'Unknown'}</td>
+        <td class="px-6 py-4 whitespace-nowrap">
+          <span class="px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[inc.status] ?? 'bg-gray-100 text-gray-700'}">${inc.status?.replace('_', ' ') ?? '—'}</span>
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${inc.created_at ? new Date(inc.created_at).toLocaleString() : '—'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-right text-sm">
+          <a href="/org/incidents/${inc.id}" class="text-[#EB0A1E] hover:underline font-medium">View</a>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function loadIncidents(page = 1) {
+    const status = (document.getElementById('status-filter') as HTMLSelectElement).value;
+    const type   = (document.getElementById('type-filter') as HTMLSelectElement).value;
+    const tbody  = document.getElementById('incidents-table-body')!;
+    tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">Loading…</td></tr>`;
+
+    const { data, error } = await actions.org.getIncidents({
+      page,
+      limit: LIMIT,
+      ...(status ? { status } : {}),
+      ...(type   ? { type }   : {}),
+    });
+
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-red-500">${error.message}</td></tr>`;
+      return;
+    }
+
+    allIncidents = (data as any).incidents ?? (Array.isArray(data) ? data : []);
+    const total       = (data as any).total      ?? allIncidents.length;
+    const totalPages  = (data as any).totalPages ?? 1;
+    const currentPage = (data as any).page       ?? page;
+
+    paginator.update({ page: currentPage, totalPages, total, limit: LIMIT });
+
+    const q = (document.getElementById('search') as HTMLInputElement).value.toLowerCase();
+    const filtered = q
+      ? allIncidents.filter((inc) =>
+          inc.id?.includes(q) ||
+          inc.location?.address?.toLowerCase().includes(q) ||
+          inc.type?.toLowerCase().includes(q))
+      : allIncidents;
+
+    renderTable(filtered);
+  }
+
+  document.getElementById('search')?.addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.toLowerCase();
+    renderTable(q
+      ? allIncidents.filter((inc) =>
+          inc.id?.includes(q) ||
+          inc.location?.address?.toLowerCase().includes(q) ||
+          inc.type?.toLowerCase().includes(q))
+      : allIncidents
+    );
+  });
+
+  document.getElementById('status-filter')?.addEventListener('change', () => loadIncidents(1));
+  document.getElementById('type-filter')?.addEventListener('change', () => loadIncidents(1));
+
+  loadIncidents();
+</script>

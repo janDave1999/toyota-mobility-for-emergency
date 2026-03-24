@@ -18,6 +18,8 @@
 | 1.2 | 2026-03-13 | Jan Dave Zamora | Updated: Beta = Web-first, Mobile = Future |
 | 1.3 | 2026-03-13 | Jan Dave Zamora | Updated: Pure AstroJS (no React), Supabase PostGIS |
 | 1.4 | 2026-03-13 | Jan Dave Zamora | Updated: Cloudflare + DigitalOcean deployment, Cloudflare KV/R2 for cache/storage |
+| 1.5 | 2026-03-19 | Jan Dave Zamora | Updated: 2-frontend model (Citizen App + Admin Portal), org-driven invite flow, System Admin bootstrap, JWT roles |
+| 1.6 | 2026-03-19 | Jan Dave Zamora | Updated: ORG_ADMIN org-scoped role added. Two-actor model clarified. OrgAdminGuard. responder_type stored on membership. |
 
 ---
 
@@ -29,15 +31,17 @@ This document defines the technical architecture for the Toyota Emergency Respon
 
 ### 1.2 Scope
 
-- Public web application (AstroJS) - **Beta: Web first**
-- Responder web application (AstroJS) - **Beta: Web first**
-- Dispatcher web dashboard (AstroJS) - **Beta: Web first**
-- Backend API services (NestJS)
-- Real-time location tracking
+**Frontend (2 separate applications):**
+- **Citizen App** (AstroJS PWA) — Self-registration, incident reporting, silent SOS, invitation response - **Beta: Web first, Mobile post-beta**
+- **Admin Portal** (AstroJS) — Used by both System Admin and Org Admins (DISPATCHER role). Organization management, member invitations, incident dispatch — **Beta: Web only**
+
+**Backend:**
+- Backend API services (NestJS) — Single API serving both frontends
+- Real-time location tracking (Socket.io)
 - SMS/USSD fallback system
 - Integration with external services
 
-**Note:** Mobile apps (iOS/Android) will be considered for future phases after beta validation.
+**Note:** Citizen mobile apps (iOS/Android React Native) will be built after beta web validation. Both frontends use the same `POST /auth/login` endpoint — roles in the JWT determine access levels and UI routing.
 
 ### 1.3 Technical Stack
 
@@ -162,79 +166,68 @@ This document defines the technical architecture for the Toyota Emergency Respon
 
 ### 3.1 Application Structure (Beta - Web Based)
 
+> **Two-frontend model.** One NestJS API serves both. Role in JWT determines access.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                      BETA: WEB APPS STRUCTURE (AstroJS)                        │
+│              FRONTEND APP 1: CITIZEN APP (AstroJS PWA)                         │
+│              Users: Citizens (CITIZEN role) + Responders (RESPONDER role)       │
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 ┌────────────────────────────────────┐  ┌────────────────────────────────────┐
-│     PUBLIC WEB APP (Citizen)       │  │    RESPONDER WEB APP             │
-│          (AstroJS)                │  │         (AstroJS)                │
+│     CITIZEN PAGES                  │  │    RESPONDER PAGES (role-gated)  │
 ├────────────────────────────────────┤  ├────────────────────────────────────┤
 │                                    │  │                                    │
-│  /pages                           │  │  /pages                           │
+│  /pages                           │  │  /pages/responder                 │
 │  ├── index.astro                 │  │  ├── dashboard.astro             │
-│  ├── report.astro                │  │  ├── incidents.astro             │
-│  ├── track.astro                 │  │  ├── incident/[id].astro        │
-│  ├── profile.astro               │  │  ├── map.astro                  │
-│  └── settings.astro              │  │  └── profile.astro               │
-│                                    │  │                                    │
-│  /components (Astro)             │  │  /components (Astro)             │
-│  ├── EmergencyButton.astro       │  │  ├── IncidentCard.astro          │
-│  ├── LocationPicker.astro        │  │  ├── MapView.astro              │
-│  ├── StatusCard.astro            │  │  ├── StatusToggle.astro         │
-│  └── ChatBox.astro               │  │  └── ActionButtons.astro        │
-│                                    │  │                                    │
-│  /services (TypeScript)          │  │  /services (TypeScript)          │
-│  ├── emergency.service.ts        │  │  ├── dispatch.service.ts         │
-│  ├── location.service.ts        │  │  ├── location.service.ts       │
-│  └── notification.service.ts    │  │  └── notification.service.ts    │
+│  ├── register.astro              │  │  ├── incidents.astro             │
+│  ├── login.astro                 │  │  ├── incident/[id].astro        │
+│  ├── report.astro                │  │  ├── map.astro                  │
+│  ├── track.astro                 │  │  └── profile.astro               │
+│  ├── invitations.astro           │  │                                    │
+│  ├── profile.astro               │  │  /components (Astro)             │
+│  └── settings.astro              │  │  ├── IncidentCard.astro          │
+│                                    │  │  ├── MapView.astro              │
+│  /components (Astro)             │  │  ├── StatusToggle.astro         │
+│  ├── EmergencyButton.astro       │  │  └── ActionButtons.astro        │
+│  ├── LocationPicker.astro        │  │                                    │
+│  ├── InvitationCard.astro        │  │  Role: RESPONDER                 │
+│  ├── StatusCard.astro            │  │  Sees: org-scoped incidents only │
+│  └── ChatBox.astro               │  │  (POLICE resp → POLICE incidents)│
 │                                    │  │                                    │
 │  PWA: Service Worker enabled     │  │  PWA: Service Worker enabled     │
-│  Offline support (future)        │  │  Offline support (future)        │
-│                                    │  │                                    │
+│  Offline support (future)        │  │  Offline-capable (future)        │
 └────────────────────────────────────┘  └────────────────────────────────────┘
 
-┌────────────────────────────────────────────────────────────────┐
-│              DISPATCHER DASHBOARD (AstroJS)                    │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  /src                                                         │
-│  ├── /pages                                                   │
-│  │   ├── dashboard.astro                                      │
-│  │   ├── incidents.astro                                     │
-│  │   ├── responders.astro                                    │
-│  │   ├── reports.astro                                      │
-│  │   └── settings.astro                                     │
-│  ├── /components (Astro)
-│  │   ├── /common (Button, Card, Input, Modal)               │
-│  │   ├── /layout (Header, Sidebar)                         │
-│  │   ├── /dashboard (StatsCard, AlertPanel)                 │
-│  │   ├── /incidents (IncidentList, Map, Timeline)          │
-│  │   └── /responders (ResponderList, Status)               │
-│  └── /stores (Zustand/Redux)                               │
-└────────────────────────────────────────────────────────────────┘
+After login → read JWT roles → route to CITIZEN or RESPONDER view
+```
 
-┌────────────────────────────────────────────────────────────────┐
-│           ORGANIZATION ADMIN DASHBOARD (AstroJS)                │
-│           (For PNP, BFP, LGU Organization Admins)              │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  /src                                                         │
-│  ├── /pages                                                   │
-│  │   ├── dashboard.astro         (Organization stats & overview)│
-│  │   ├── branches.astro         (Manage branches/units)       │
-│  │   ├── responders.astro       (Manage organization responders)│
-│  │   ├── incidents.astro        (Organization incident history)│
-│  │   ├── responders/[id].astro  (Responder details)            │
-│  │   └── settings.astro         (Organization profile)        │
-│  ├── /components (Astro)                                      │
-│  │   ├── /common (Button, Card, Input, Modal)               │
-│  │   ├── /layout (Header, Sidebar)                          │
-│  │   ├── /responders (ResponderList, AddResponder)          │
-│  │   └── /stats (OrgStats, ResponseTimeChart)               │
-│  └── /stores (Zustand/Redux)                                 │
-└────────────────────────────────────────────────────────────────┘
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│              FRONTEND APP 2: ADMIN PORTAL (AstroJS)                            │
+│              Users: System Admin (ADMIN role) + Org Admins (DISPATCHER role)   │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────┐  ┌────────────────────────────────────┐
+│   SYSTEM ADMIN PAGES               │  │    ORG ADMIN (DISPATCHER) PAGES  │
+│   role: ADMIN                      │  │    role: DISPATCHER              │
+├────────────────────────────────────┤  ├────────────────────────────────────┤
+│                                    │  │                                    │
+│  /pages/admin                     │  │  /pages/org                       │
+│  ├── dashboard.astro             │  │  ├── dashboard.astro             │
+│  ├── organizations.astro         │  │  ├── members.astro               │
+│  ├── organizations/new.astro     │  │  ├── members/invite.astro        │
+│  ├── organizations/[id].astro    │  │  ├── incidents.astro             │
+│  └── users.astro                 │  │  ├── dispatch.astro              │
+│                                    │  │  └── settings.astro             │
+│  Can: create orgs,                │  │                                    │
+│       invite first DISPATCHER    │  │  Can: invite members,            │
+│       view all system data        │  │       revoke members,            │
+│                                    │  │       dispatch responders,       │
+│                                    │  │       view org incidents only    │
+└────────────────────────────────────┘  └────────────────────────────────────┘
+
+After login → read JWT roles → route to ADMIN or DISPATCHER (Org Admin) view
 ```
 
 ### 3.2 Mobile Apps (Future Phase)
@@ -672,10 +665,9 @@ Consider React Native for mobile after beta validation:
                     │                                 │
                     │  {                              │
                     │    "sub": "user_id",           │
-                    │    "role": "responder",        │
-                    │    "agency": "PNP",             │
-                    │    "permissions": [...],        │
-                    │    "exp": timestamp             │
+                    │    "roles": ["RESPONDER"],     │
+                    │    "email": "user@example.com",│
+                    │    "expires_at": timestamp     │
                     │  }                              │
                     └──────────────┬────────────────┘
                                     │
@@ -683,30 +675,46 @@ Consider React Native for mobile after beta validation:
                      ┌─────────────────────────────────┐
                      │    AUTHORIZATION (RBAC)         │
                      │                                 │
-                     │  ┌──────────┐ ┌──────────┐    │
-                     │  │  CITIZEN │ │RESPONDER │    │
-                     │  ├──────────┼─┼──────────┤    │
-                     │  │• report  │ │• accept  │    │
-                     │  │• track   │ │• update │    │
-                     │  │• profile │ │• navigate│    │
-                     │  └──────────┘ └──────────┘    │
-                     │                                 │
-                     │  ┌──────────┐ ┌──────────┐    │
-                     │  │  AGENCY  │ │DISPATCHER│    │
-                     │  │  ADMIN   │ │          │    │
-                     │  ├──────────┼─┼──────────┤    │
-                     │  │• manage │ │• monitor │    │
-                     │  │  responders│ │• assign  │    │
-                     │  │• view stats│ │• escalate│    │
-                     │  └──────────┘ └──────────┘    │
-                     │                                 │
-                     │  ┌──────────┐                  │
-                     │  │  ADMIN   │                  │
-                     │  ├──────────┤                  │
-                     │  │• manage  │                  │
-                     │  │• reports │                  │
-                     │  │• config  │                  │
-                     │  └──────────┘                  │
+                     │  GLOBAL ROLES (JWT roles[])      │
+                     │  ┌──────────┐ ┌────────────────┐  │
+                     │  │  CITIZEN │ │   RESPONDER    │  │
+                     │  ├──────────┼─┼────────────────┤  │
+                     │  │• report  │ │• accept invite │  │
+                     │  │• track   │ │• view org-     │  │
+                     │  │• invites │ │  scoped alerts │  │
+                     │  │• profile │ │• update status │  │
+                     │  └──────────┘ └────────────────┘  │
+                     │                                    │
+                     │  ┌──────────┐ ┌────────────────┐  │
+                     │  │DISPATCHER│ │     ADMIN      │  │
+                     │  │(global)  │ │ (System Admin) │  │
+                     │  ├──────────┼─┼────────────────┤  │
+                     │  │• dispatch│ │• create orgs   │  │
+                     │  │• manage  │ │• deactivate    │  │
+                     │  │  org-    │ │  orgs          │  │
+                     │  │  scoped  │ │• system-wide   │  │
+                     │  │  view    │ │  oversight     │  │
+                     │  └──────────┘ └────────────────┘  │
+                     │                                    │
+                     │  ORG-SCOPED ROLE (OrgAdminGuard)   │
+                     │  ┌──────────────────────────────┐  │
+                     │  │  ORG_ADMIN (membership role) │  │
+                     │  ├──────────────────────────────┤  │
+                     │  │• invite / promote / revoke   │  │
+                     │  │  members in their org        │  │
+                     │  │• create dispatcher accounts  │  │
+                     │  │• create sub-organizations    │  │
+                     │  │• update org profile fields   │  │
+                     │  │  (not structural fields)     │  │
+                     │  │                              │  │
+                     │  │ Checked via OrgAdminGuard    │  │
+                     │  │ System ADMIN bypasses it     │  │
+                     │  └──────────────────────────────┘  │
+                     │                                    │
+                     │  Single POST /auth/login for all.  │
+                     │  JWT roles[] drives global access. │
+                     │  ORG_ADMIN checked per-org via     │
+                     │  organization_members table.       │
                      └─────────────────────────────────┘
 ```
 
@@ -858,8 +866,8 @@ Consider React Native for mobile after beta validation:
 ---
 
 **Document Status:** Draft
-**Last Updated:** 2026-03-13
-**Next Review Date:** 2026-04-13
+**Last Updated:** 2026-03-19
+**Next Review Date:** 2026-04-19
 
 ---
 
